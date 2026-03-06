@@ -7,6 +7,14 @@ description: Standard quality workflow for VPL frontend implementation in Next.j
 
 Follow this workflow for every frontend task.
 
+## Global Delivery Constraints
+
+- Keep each PR limited to one issue and one vertical slice.
+- Keep PR size small: target at most 8 changed files and 300 net LOC.
+- Split work into follow-up PRs when the change exceeds those limits.
+- Run `pnpm test` and require a passing result before review-ready status.
+- Run `pnpm test:coverage` and require a passing result before review-ready status.
+
 ## 1) Lock Scope
 
 - Identify issue goal, acceptance criteria, and non-goals.

@@ -11,6 +11,8 @@
 - Ensure CI checks are deterministic and non-interactive.
 - Ensure failed build blocks deployment path.
 - Ensure environment-specific deploy behavior is explicit.
+- Require `pnpm test` to pass before marking PR review-ready.
+- Require `pnpm test:coverage` to pass before marking PR review-ready.
 
 ## Security gates
 
@@ -35,3 +37,5 @@
 - Capture service revision/image digest after deploy.
 - Capture health check or smoke-test result.
 - Capture post-deploy log check window.
+- Keep PR limited to one issue and one vertical slice.
+- Keep PR size target at most 8 changed files and 300 net LOC.
