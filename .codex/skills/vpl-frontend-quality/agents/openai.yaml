@@ -1,0 +1,4 @@
+interface:
+  display_name: "VPL Frontend Quality"
+  short_description: "Consistent UI quality gates for VPL frontend work"
+  default_prompt: "Use $vpl-frontend-quality to implement a frontend issue with consistent quality checks."

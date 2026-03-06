@@ -1,0 +1,4 @@
+interface:
+  display_name: "VPL Research Quality"
+  short_description: "Consistent validation and evidence quality for VPL research"
+  default_prompt: "Use $vpl-research-quality to execute a research task with consistent quality checks."
