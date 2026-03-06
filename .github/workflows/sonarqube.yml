@@ -17,6 +17,22 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Generate test coverage (lcov)
+        run: pnpm test:coverage
+
       - name: SonarQube Cloud Scan
         uses: SonarSource/sonarqube-scan-action@v7
         env:

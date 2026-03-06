@@ -1,6 +1,7 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import React, { FormEvent, useState } from "react";
+import { z } from "zod";
 
 const highlights = [
   "Rakennetaan kilpailukykyinen Veikkausliiga-fantasy alusta asti kunnolla.",
@@ -10,7 +11,19 @@ const highlights = [
 
 type FormStatus = "idle" | "submitting" | "success" | "error";
 
-const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const emailSchema = z.string().email();
+
+function getStatusMessage(status: FormStatus, errorMessage: string) {
+  if (status === "success") {
+    return "Kiitos! Olet nyt odotuslistalla.";
+  }
+
+  if (status === "error") {
+    return errorMessage;
+  }
+
+  return "Ei roskapostia. Vain olennaiset paivitykset ja kutsut.";
+}
 
 export default function Home() {
   const [email, setEmail] = useState("");
@@ -21,7 +34,7 @@ export default function Home() {
     event.preventDefault();
     const normalizedEmail = email.trim().toLowerCase();
 
-    if (!emailRegex.test(normalizedEmail)) {
+    if (!emailSchema.safeParse(normalizedEmail).success) {
       setStatus("error");
       setErrorMessage("Anna kelvollinen sahkopostiosoite.");
       return;
@@ -92,13 +105,9 @@ export default function Home() {
               {status === "submitting" ? "Liitytaan..." : "Liity odotuslistalle"}
             </button>
           </div>
-          <p id="waitlist-status" className={`status status-${status}`} role="status">
-            {status === "success"
-              ? "Kiitos! Olet nyt odotuslistalla."
-              : status === "error"
-                ? errorMessage
-                : "Ei roskapostia. Vain olennaiset paivitykset ja kutsut."}
-          </p>
+          <output id="waitlist-status" className={`status status-${status}`}>
+            {getStatusMessage(status, errorMessage)}
+          </output>
         </form>
       </section>
 
