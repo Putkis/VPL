@@ -1,0 +1,4 @@
+interface:
+  display_name: "VPL Ops Quality"
+  short_description: "Consistent deploy and reliability quality gates for VPL"
+  default_prompt: "Use $vpl-ops-quality to implement an ops task with consistent quality checks."
