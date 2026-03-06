@@ -30,9 +30,7 @@ export default function Home() {
   const [status, setStatus] = useState<FormStatus>("idle");
   const [errorMessage, setErrorMessage] = useState("");
 
-  const submitWaitlist: React.FormEventHandler<HTMLFormElement> = async (
-    event
-  ) => {
+  function submitWaitlist(event: React.SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
     const normalizedEmail = email.trim().toLowerCase();
 
@@ -45,32 +43,34 @@ export default function Home() {
     setStatus("submitting");
     setErrorMessage("");
 
-    try {
-      const response = await fetch("/api/waitlist", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ email: normalizedEmail })
-      });
+    void (async () => {
+      try {
+        const response = await fetch("/api/waitlist", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ email: normalizedEmail })
+        });
 
-      if (!response.ok) {
+        if (!response.ok) {
+          setStatus("error");
+          setErrorMessage(
+            response.status === 400
+              ? "Sahkopostiosoite ei kelpaa. Tarkista osoite ja yrita uudelleen."
+              : "Tallennus ei onnistunut. Yrita hetken paasta uudelleen."
+          );
+          return;
+        }
+
+        setStatus("success");
+        setEmail("");
+      } catch {
         setStatus("error");
-        setErrorMessage(
-          response.status === 400
-            ? "Sahkopostiosoite ei kelpaa. Tarkista osoite ja yrita uudelleen."
-            : "Tallennus ei onnistunut. Yrita hetken paasta uudelleen."
-        );
-        return;
+        setErrorMessage("Yhteys katkesi. Tarkista verkkoyhteys ja yrita uudelleen.");
       }
-
-      setStatus("success");
-      setEmail("");
-    } catch {
-      setStatus("error");
-      setErrorMessage("Yhteys katkesi. Tarkista verkkoyhteys ja yrita uudelleen.");
-    }
-  };
+    })();
+  }
 
   return (
     <main className="landing">
