@@ -7,6 +7,14 @@ description: Standard quality workflow for VPL operations and release tasks. Use
 
 Follow this workflow for every ops task.
 
+## Global Delivery Constraints
+
+- Keep each PR limited to one issue and one vertical slice.
+- Keep PR size small: target at most 8 changed files and 300 net LOC.
+- Split work into follow-up PRs when the change exceeds those limits.
+- Run `pnpm test` and require a passing result before review-ready status.
+- Run `pnpm test:coverage` and require a passing result before review-ready status.
+
 ## 1) Lock Change Risk
 
 - Define blast radius, rollback path, and verification checkpoints.

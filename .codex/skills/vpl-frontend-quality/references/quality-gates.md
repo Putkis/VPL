@@ -35,9 +35,13 @@
 - Add or update unit tests for logic changes.
 - Add or update e2e/smoke test for critical flow changes.
 - Verify acceptance criteria manually when automation is missing.
+- Run `pnpm test` and require a passing result before marking PR review-ready.
+- Run `pnpm test:coverage` and require a passing result before marking PR review-ready.
 
 ## Release gates
 
 - Confirm no debug output or temporary placeholders.
 - Confirm analytics events are intentional and named consistently.
 - Confirm copy and CTA text are final for this issue scope.
+- Keep PR limited to one issue and one vertical slice.
+- Keep PR size target at most 8 changed files and 300 net LOC.

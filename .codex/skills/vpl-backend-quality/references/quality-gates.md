@@ -35,9 +35,13 @@
 - Cover happy path and rejection path.
 - Cover authorization failures.
 - Cover edge cases around deadlines and repeated requests.
+- Run `pnpm test` and require a passing result before marking PR review-ready.
+- Run `pnpm test:coverage` and require a passing result before marking PR review-ready.
 
 ## Release gates
 
 - Document new env vars and secrets usage.
 - Document API or schema changes for dependent surfaces.
 - Confirm issue acceptance criteria are all verifiable.
+- Keep PR limited to one issue and one vertical slice.
+- Keep PR size target at most 8 changed files and 300 net LOC.
