@@ -1,6 +1,6 @@
 "use client";
 
-import React, { FormEvent, useState } from "react";
+import React, { useState } from "react";
 import { z } from "zod";
 
 const highlights = [
@@ -30,7 +30,9 @@ export default function Home() {
   const [status, setStatus] = useState<FormStatus>("idle");
   const [errorMessage, setErrorMessage] = useState("");
 
-  async function submitWaitlist(event: FormEvent<HTMLFormElement>) {
+  const submitWaitlist: React.FormEventHandler<HTMLFormElement> = async (
+    event
+  ) => {
     event.preventDefault();
     const normalizedEmail = email.trim().toLowerCase();
 
@@ -68,7 +70,7 @@ export default function Home() {
       setStatus("error");
       setErrorMessage("Yhteys katkesi. Tarkista verkkoyhteys ja yrita uudelleen.");
     }
-  }
+  };
 
   return (
     <main className="landing">
