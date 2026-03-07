@@ -25,4 +25,4 @@ Requirements:
 - Map every plan item to the issue acceptance criteria.
 - Call out assumptions explicitly.
 - Flag missing information before implementation starts.
-- Ask permission to implement the plan.use 
+- Ask permission to implement the plan.
