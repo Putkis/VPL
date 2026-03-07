@@ -7,7 +7,9 @@ export const metadata: Metadata = {
   description: "Veikkausliiga fantasy MVP"
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+type RootLayoutProps = Readonly<{ children: ReactNode }>;
+
+export default function RootLayout({ children }: RootLayoutProps) {
   const gaMeasurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID?.trim();
   const isGaEnabled = Boolean(gaMeasurementId);
 

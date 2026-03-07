@@ -29,15 +29,18 @@ function sanitizeEventProps(props?: AnalyticsEventProps) {
 }
 
 export function trackEvent(name: AnalyticsEventName, props?: AnalyticsEventProps) {
-  if (typeof window === "undefined" || typeof window.gtag !== "function") {
+  const globalObject = globalThis as typeof globalThis & { window?: Window };
+  const browserWindow = globalObject.window;
+
+  if (!browserWindow || typeof browserWindow.gtag !== "function") {
     return;
   }
 
   const sanitizedProps = sanitizeEventProps(props);
   if (sanitizedProps) {
-    window.gtag("event", name, sanitizedProps);
+    browserWindow.gtag("event", name, sanitizedProps);
     return;
   }
 
-  window.gtag("event", name);
+  browserWindow.gtag("event", name);
 }
