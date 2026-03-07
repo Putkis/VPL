@@ -107,7 +107,13 @@ export default function Home() {
               {status === "submitting" ? "Liitytaan..." : "Liity odotuslistalle"}
             </button>
           </div>
-          <output id="waitlist-status" className={`status status-${status}`}>
+          <output
+            id="waitlist-status"
+            className={`status status-${status}`}
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+          >
             {getStatusMessage(status, errorMessage)}
           </output>
         </form>
