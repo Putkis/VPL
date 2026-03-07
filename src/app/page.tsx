@@ -6,8 +6,8 @@ import { trackEvent } from "../lib/analytics";
 
 const highlights = [
   "Rakennetaan kilpailukykyinen Veikkausliiga-fantasy alusta asti kunnolla.",
-  "Aikainen odotuslista saa ensimmaisena kutsun suljettuun betaan.",
-  "Saat viikottaiset paivitykset kehityksesta ja julkaisuaikataulusta."
+  "Aikainen odotuslista saa ensimmäisenä kutsun suljettuun betaan.",
+  "Saat viikoittaiset päivitykset kehityksestä ja julkaisuaikataulusta."
 ];
 
 const topFeatureInterestValues = [
@@ -22,10 +22,10 @@ const topFeatureInterestOptions: Array<{
   value: (typeof topFeatureInterestValues)[number];
   label: string;
 }> = [
-  { value: "live_scores", label: "Live-pisteet ottelupaivan aikana" },
-  { value: "player_stats", label: "Syvemmat pelaajatilastot" },
+  { value: "live_scores", label: "Live-pisteet ottelupäivän aikana" },
+  { value: "player_stats", label: "Syvemmät pelaajatilastot" },
   { value: "friend_leagues", label: "Kaveriliigat ja haastot" },
-  { value: "transfer_tools", label: "Paremmat siirto- ja kokoonpanotyokalut" },
+  { value: "transfer_tools", label: "Paremmat siirto- ja kokoonpanotyökalut" },
   { value: "other", label: "Jokin muu" }
 ];
 
@@ -44,7 +44,7 @@ function getStatusMessage(status: FormStatus, errorMessage: string) {
     return errorMessage;
   }
 
-  return "Ei roskapostia. Vain olennaiset paivitykset ja kutsut.";
+  return "Ei roskapostia. Vain olennaiset päivitykset ja kutsut.";
 }
 
 export default function Home() {
@@ -76,7 +76,7 @@ export default function Home() {
 
     if (!emailSchema.safeParse(normalizedEmail).success) {
       setStatus("error");
-      setErrorMessage("Anna kelvollinen sahkopostiosoite.");
+      setErrorMessage("Anna kelvollinen sähköpostiosoite.");
       trackEvent("signup_error", { reason: "invalid_email" });
       return;
     }
@@ -116,8 +116,8 @@ export default function Home() {
             reason === "invalid_feature_interest"
               ? "Valitse sinua eniten kiinnostava toiminnallisuus."
               : response.status === 400
-              ? "Sahkopostiosoite ei kelpaa. Tarkista osoite ja yrita uudelleen."
-              : "Tallennus ei onnistunut. Yrita hetken paasta uudelleen."
+              ? "Sähköpostiosoite ei kelpaa. Tarkista osoite ja yritä uudelleen."
+              : "Tallennus ei onnistunut. Yritä hetken päästä uudelleen."
           );
           trackEvent("signup_error", { reason });
           return;
@@ -129,7 +129,7 @@ export default function Home() {
         trackEvent("signup_success");
       } catch {
         setStatus("error");
-        setErrorMessage("Yhteys katkesi. Tarkista verkkoyhteys ja yrita uudelleen.");
+        setErrorMessage("Yhteys katkesi. Tarkista verkkoyhteys ja yritä uudelleen.");
         trackEvent("signup_error", { reason: "network_error" });
       }
     })();
@@ -141,12 +141,12 @@ export default function Home() {
         <p className="eyebrow">VPL / Veikkausliiga Fantasy</p>
         <h1>Liity odotuslistalle ennen julkista avautumista.</h1>
         <p className="lead">
-          Ensimmaiset kayttajat paasevat mukaan suljettuun betaan ja vaikuttamaan
+          Ensimmäiset käyttäjät pääsevät mukaan suljettuun betaan ja vaikuttamaan
           tuotteen ydinominaisuuksiin.
         </p>
         <form className="waitlist-form" onSubmit={submitWaitlist} noValidate>
           <fieldset className="feature-question">
-            <legend>Mika toiminnallisuus kiinnostaa eniten?</legend>
+            <legend>Mikä toiminnallisuus kiinnostaa eniten?</legend>
             <div className="feature-options">
               {topFeatureInterestOptions.map((option) => (
                 <label key={option.value} className="feature-option">
@@ -168,7 +168,7 @@ export default function Home() {
               ))}
             </div>
           </fieldset>
-          <label htmlFor="waitlist-email">Sahkoposti</label>
+          <label htmlFor="waitlist-email">Sähköposti</label>
           <div className="input-row">
             <input
               id="waitlist-email"
@@ -190,7 +190,7 @@ export default function Home() {
               required
             />
             <button type="submit" disabled={status === "submitting"}>
-              {status === "submitting" ? "Liitytaan..." : "Liity odotuslistalle"}
+              {status === "submitting" ? "Liitytään..." : "Liity odotuslistalle"}
             </button>
           </div>
           <output
@@ -204,7 +204,7 @@ export default function Home() {
         </form>
       </section>
 
-      <section className="highlights" aria-label="Miksi liittya nyt">
+      <section className="highlights" aria-label="Miksi liittyä nyt">
         <ul>
           {highlights.map((item) => (
             <li key={item}>{item}</li>
