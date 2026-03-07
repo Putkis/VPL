@@ -8,9 +8,26 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
+  const plausibleDomain = process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN?.trim();
+  const isPlausibleEnabled = Boolean(plausibleDomain);
+
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        {isPlausibleEnabled ? (
+          <>
+            <script>
+              {"window.plausible=window.plausible||function(){(window.plausible.q=window.plausible.q||[]).push(arguments)};"}
+            </script>
+            <script
+              defer
+              data-domain={plausibleDomain}
+              src="https://plausible.io/js/script.js"
+            />
+          </>
+        ) : null}
+        {children}
+      </body>
     </html>
   );
 }

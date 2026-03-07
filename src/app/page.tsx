@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { z } from "zod";
+import { trackEvent } from "../lib/analytics";
 
 const highlights = [
   "Rakennetaan kilpailukykyinen Veikkausliiga-fantasy alusta asti kunnolla.",
@@ -30,13 +31,19 @@ export default function Home() {
   const [status, setStatus] = useState<FormStatus>("idle");
   const [errorMessage, setErrorMessage] = useState("");
 
+  useEffect(() => {
+    trackEvent("page_view");
+  }, []);
+
   function submitWaitlist(event: React.SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
     const normalizedEmail = email.trim().toLowerCase();
+    trackEvent("signup_submit");
 
     if (!emailSchema.safeParse(normalizedEmail).success) {
       setStatus("error");
       setErrorMessage("Anna kelvollinen sahkopostiosoite.");
+      trackEvent("signup_error", { reason: "invalid_email" });
       return;
     }
 
@@ -54,20 +61,24 @@ export default function Home() {
         });
 
         if (!response.ok) {
+          const reason = response.status === 400 ? "invalid_email" : "server_error";
           setStatus("error");
           setErrorMessage(
             response.status === 400
               ? "Sahkopostiosoite ei kelpaa. Tarkista osoite ja yrita uudelleen."
               : "Tallennus ei onnistunut. Yrita hetken paasta uudelleen."
           );
+          trackEvent("signup_error", { reason });
           return;
         }
 
         setStatus("success");
         setEmail("");
+        trackEvent("signup_success");
       } catch {
         setStatus("error");
         setErrorMessage("Yhteys katkesi. Tarkista verkkoyhteys ja yrita uudelleen.");
+        trackEvent("signup_error", { reason: "network_error" });
       }
     })();
   }

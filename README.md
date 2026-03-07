@@ -57,3 +57,23 @@ See [`docs/adr/`](docs/adr/) for the locked decisions and rationale.
 ## Operations
 
 - Cloud Scheduler setup: [`docs/operations/cloud-scheduler.md`](docs/operations/cloud-scheduler.md)
+
+## Analytics Tracking (Plausible)
+
+This project uses Plausible for funnel tracking on the landing page.
+
+Required env var:
+
+- `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` (for example `vpl.example.com`)
+
+Tracked events:
+
+- `page_view`
+- `signup_submit`
+- `signup_success`
+- `signup_error` (with `reason`: `invalid_email`, `server_error`, or `network_error`)
+
+Conversion dashboard setup:
+
+- Use `signup_success / page_view` as the core conversion ratio.
+- Segment by `signup_error.reason` to see where drop-offs happen.
