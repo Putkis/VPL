@@ -1,4 +1,4 @@
-name: CI
+name: SonarQube
 
 on:
   pull_request:
@@ -6,11 +6,16 @@ on:
     branches: [main]
 
 jobs:
-  test:
+  sonar:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -25,8 +30,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
 
-      - name: Build
-        run: pnpm build
+      - name: Generate test coverage (lcov)
+        run: pnpm test:coverage
 
-      - name: Unit tests
-        run: pnpm test
+      - name: SonarQube Cloud Scan
+        uses: SonarSource/sonarqube-scan-action@v7
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
