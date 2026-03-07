@@ -1,22 +1,30 @@
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import Home from "../../src/app/page";
 
 const fetchMock = vi.fn();
+const gtagMock = vi.fn();
+
+type WindowWithGtag = Window & {
+  gtag?: (...args: unknown[]) => void;
+};
 
 describe("Home landing page", () => {
   beforeEach(() => {
     fetchMock.mockReset();
+    gtagMock.mockReset();
     vi.stubGlobal("fetch", fetchMock);
+    (window as WindowWithGtag).gtag = gtagMock;
   });
 
   afterAll(() => {
     vi.unstubAllGlobals();
+    delete (window as WindowWithGtag).gtag;
   });
 
-  it("renders hero content and default status text", () => {
+  it("renders hero content and default status text", async () => {
     render(<Home />);
     const status = screen.getByRole("status");
 
@@ -27,6 +35,9 @@ describe("Home landing page", () => {
     ).toBeInTheDocument();
     expect(status).toHaveTextContent("Ei roskapostia. Vain olennaiset paivitykset ja kutsut.");
     expect(screen.getByLabelText("Sahkoposti")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(gtagMock).toHaveBeenCalledWith("event", "page_view");
+    });
   });
 
   it("shows validation error for invalid email and does not call API", async () => {
@@ -39,6 +50,10 @@ describe("Home landing page", () => {
 
     expect(fetchMock).not.toHaveBeenCalled();
     expect(status).toHaveTextContent("Anna kelvollinen sahkopostiosoite.");
+    expect(gtagMock).toHaveBeenCalledWith("event", "signup_submit");
+    expect(gtagMock).toHaveBeenCalledWith("event", "signup_error", {
+      reason: "invalid_email"
+    });
   });
 
   it("submits normalized email and shows success state", async () => {
@@ -65,6 +80,8 @@ describe("Home landing page", () => {
       body: JSON.stringify({ email: "hello@example.com" })
     });
     expect(status).toHaveTextContent("Kiitos! Olet nyt odotuslistalla.");
+    expect(gtagMock).toHaveBeenCalledWith("event", "signup_submit");
+    expect(gtagMock).toHaveBeenCalledWith("event", "signup_success");
   });
 
   it("shows backend validation message on 400 response", async () => {
@@ -80,5 +97,28 @@ describe("Home landing page", () => {
     expect(status).toHaveTextContent(
       "Sahkopostiosoite ei kelpaa. Tarkista osoite ja yrita uudelleen."
     );
+    expect(gtagMock).toHaveBeenCalledWith("event", "signup_submit");
+    expect(gtagMock).toHaveBeenCalledWith("event", "signup_error", {
+      reason: "invalid_email"
+    });
+  });
+
+  it("tracks network error separately when request throws", async () => {
+    const user = userEvent.setup();
+    fetchMock.mockRejectedValue(new Error("connection lost"));
+
+    render(<Home />);
+    const status = screen.getByRole("status");
+
+    await user.type(screen.getByLabelText("Sahkoposti"), "user@example.com");
+    await user.click(screen.getByRole("button", { name: "Liity odotuslistalle" }));
+
+    expect(status).toHaveTextContent(
+      "Yhteys katkesi. Tarkista verkkoyhteys ja yrita uudelleen."
+    );
+    expect(gtagMock).toHaveBeenCalledWith("event", "signup_submit");
+    expect(gtagMock).toHaveBeenCalledWith("event", "signup_error", {
+      reason: "network_error"
+    });
   });
 });
