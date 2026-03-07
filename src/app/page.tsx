@@ -110,7 +110,6 @@ export default function Home() {
           <output
             id="waitlist-status"
             className={`status status-${status}`}
-            role="status"
             aria-live="polite"
             aria-atomic="true"
           >
