@@ -8,10 +8,7 @@ type AnalyticsEventProps = Record<string, string | number | boolean | undefined>
 
 declare global {
   interface Window {
-    plausible?: (
-      eventName: string,
-      options?: { props?: Record<string, string | number | boolean> }
-    ) => void;
+    gtag?: (...args: unknown[]) => void;
   }
 }
 
@@ -32,15 +29,15 @@ function sanitizeEventProps(props?: AnalyticsEventProps) {
 }
 
 export function trackEvent(name: AnalyticsEventName, props?: AnalyticsEventProps) {
-  if (typeof window === "undefined" || typeof window.plausible !== "function") {
+  if (typeof window === "undefined" || typeof window.gtag !== "function") {
     return;
   }
 
   const sanitizedProps = sanitizeEventProps(props);
   if (sanitizedProps) {
-    window.plausible(name, { props: sanitizedProps });
+    window.gtag("event", name, sanitizedProps);
     return;
   }
 
-  window.plausible(name);
+  window.gtag("event", name);
 }
