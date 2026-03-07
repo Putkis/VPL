@@ -60,6 +60,34 @@ h1 {
   margin-bottom: 0.5rem;
 }
 
+.feature-question {
+  margin: 0 0 1rem;
+  padding: 0;
+  border: 0;
+}
+
+.feature-question legend {
+  margin-bottom: 0.6rem;
+  font-weight: 700;
+}
+
+.feature-options {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.feature-option {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  font-weight: 500;
+  margin: 0;
+}
+
+.feature-option input {
+  margin: 0;
+}
+
 .input-row {
   display: flex;
   gap: 0.5rem;

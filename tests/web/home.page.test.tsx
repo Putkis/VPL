@@ -11,6 +11,12 @@ type WindowWithGtag = Window & {
   gtag?: (...args: unknown[]) => void;
 };
 
+const defaultFeatureLabel = "Kaveriliigat ja haastot";
+
+async function selectTopFeatureInterest(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole("radio", { name: defaultFeatureLabel }));
+}
+
 describe("Home landing page", () => {
   beforeEach(() => {
     fetchMock.mockReset();
@@ -34,9 +40,28 @@ describe("Home landing page", () => {
       })
     ).toBeInTheDocument();
     expect(status).toHaveTextContent("Ei roskapostia. Vain olennaiset paivitykset ja kutsut.");
+    expect(
+      screen.getByRole("group", { name: "Mika toiminnallisuus kiinnostaa eniten?" })
+    ).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: defaultFeatureLabel })).toBeInTheDocument();
     expect(screen.getByLabelText("Sahkoposti")).toBeInTheDocument();
     await waitFor(() => {
       expect(gtagMock).toHaveBeenCalledWith("event", "page_view");
+    });
+  });
+
+  it("shows validation error for missing feature choice and does not call API", async () => {
+    const user = userEvent.setup();
+    render(<Home />);
+    const status = screen.getByRole("status");
+
+    await user.type(screen.getByLabelText("Sahkoposti"), "valid@example.com");
+    await user.click(screen.getByRole("button", { name: "Liity odotuslistalle" }));
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(status).toHaveTextContent("Valitse sinua eniten kiinnostava toiminnallisuus.");
+    expect(gtagMock).toHaveBeenCalledWith("event", "signup_error", {
+      reason: "invalid_feature_interest"
     });
   });
 
@@ -45,12 +70,15 @@ describe("Home landing page", () => {
     render(<Home />);
     const status = screen.getByRole("status");
 
+    await selectTopFeatureInterest(user);
     await user.type(screen.getByLabelText("Sahkoposti"), "invalid-email");
     await user.click(screen.getByRole("button", { name: "Liity odotuslistalle" }));
 
     expect(fetchMock).not.toHaveBeenCalled();
     expect(status).toHaveTextContent("Anna kelvollinen sahkopostiosoite.");
-    expect(gtagMock).toHaveBeenCalledWith("event", "signup_submit");
+    expect(gtagMock).toHaveBeenCalledWith("event", "signup_submit", {
+      top_feature_interest: "friend_leagues"
+    });
     expect(gtagMock).toHaveBeenCalledWith("event", "signup_error", {
       reason: "invalid_email"
     });
@@ -70,6 +98,7 @@ describe("Home landing page", () => {
     render(<Home />);
     const status = screen.getByRole("status");
 
+    await selectTopFeatureInterest(user);
     await user.type(screen.getByLabelText("Sahkoposti"), "Hello@Example.com ");
     await user.click(screen.getByRole("button", { name: "Liity odotuslistalle" }));
 
@@ -77,10 +106,15 @@ describe("Home landing page", () => {
     expect(fetchMock).toHaveBeenCalledWith("/api/waitlist", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: "hello@example.com" })
+      body: JSON.stringify({
+        email: "hello@example.com",
+        topFeatureInterest: "friend_leagues"
+      })
     });
     expect(status).toHaveTextContent("Kiitos! Olet nyt odotuslistalla.");
-    expect(gtagMock).toHaveBeenCalledWith("event", "signup_submit");
+    expect(gtagMock).toHaveBeenCalledWith("event", "signup_submit", {
+      top_feature_interest: "friend_leagues"
+    });
     expect(gtagMock).toHaveBeenCalledWith("event", "signup_success");
   });
 
@@ -91,13 +125,16 @@ describe("Home landing page", () => {
     render(<Home />);
     const status = screen.getByRole("status");
 
+    await selectTopFeatureInterest(user);
     await user.type(screen.getByLabelText("Sahkoposti"), "user@example.com");
     await user.click(screen.getByRole("button", { name: "Liity odotuslistalle" }));
 
     expect(status).toHaveTextContent(
       "Sahkopostiosoite ei kelpaa. Tarkista osoite ja yrita uudelleen."
     );
-    expect(gtagMock).toHaveBeenCalledWith("event", "signup_submit");
+    expect(gtagMock).toHaveBeenCalledWith("event", "signup_submit", {
+      top_feature_interest: "friend_leagues"
+    });
     expect(gtagMock).toHaveBeenCalledWith("event", "signup_error", {
       reason: "invalid_email"
     });
@@ -110,13 +147,16 @@ describe("Home landing page", () => {
     render(<Home />);
     const status = screen.getByRole("status");
 
+    await selectTopFeatureInterest(user);
     await user.type(screen.getByLabelText("Sahkoposti"), "user@example.com");
     await user.click(screen.getByRole("button", { name: "Liity odotuslistalle" }));
 
     expect(status).toHaveTextContent(
       "Yhteys katkesi. Tarkista verkkoyhteys ja yrita uudelleen."
     );
-    expect(gtagMock).toHaveBeenCalledWith("event", "signup_submit");
+    expect(gtagMock).toHaveBeenCalledWith("event", "signup_submit", {
+      top_feature_interest: "friend_leagues"
+    });
     expect(gtagMock).toHaveBeenCalledWith("event", "signup_error", {
       reason: "network_error"
     });

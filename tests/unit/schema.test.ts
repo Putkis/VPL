@@ -15,5 +15,6 @@ describe("database schema", () => {
     expect(appUsers.email).toBeDefined();
     expect(teams.userId).toBeDefined();
     expect(waitlistSignups.email).toBeDefined();
+    expect(waitlistSignups.topFeatureInterest).toBeDefined();
   });
 });
