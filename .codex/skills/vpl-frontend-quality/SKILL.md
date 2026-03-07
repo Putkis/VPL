@@ -26,6 +26,7 @@ Follow this workflow for every frontend task.
 - Define UI states first: loading, empty, success, error.
 - Define responsive behavior for mobile and desktop.
 - Define accessibility behavior for keyboard and screen reader use.
+- Define locator strategy for critical flows: prefer role/label based selectors first, then stable `data-testid` where semantics are insufficient.
 
 ## 3) Implement Predictably
 
@@ -33,12 +34,16 @@ Follow this workflow for every frontend task.
 - Keep components composable and avoid duplicate state logic.
 - Keep user-facing errors actionable and specific.
 - Keep visual consistency with existing product direction.
+- Keep interactive controls discoverable via accessible name (button text, `aria-label`, or associated label).
+- Keep automation locators deterministic and stable across refactors.
+- Use `data-testid` for non-semantic, repeated, or dynamic-text elements that are otherwise brittle to target.
 
 ## 4) Verify With Gates
 
 - Run the checklist in `references/quality-gates.md`.
 - Verify issue acceptance criteria one by one.
 - Run available tests and add missing tests for changed behavior.
+- Verify changed UI is testable without brittle selectors (no CSS chains or positional selectors in new tests).
 
 ## 5) Report Completion
 
