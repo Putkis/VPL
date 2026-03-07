@@ -39,12 +39,12 @@ describe("Home landing page", () => {
         name: "Liity odotuslistalle ennen julkista avautumista."
       })
     ).toBeInTheDocument();
-    expect(status).toHaveTextContent("Ei roskapostia. Vain olennaiset paivitykset ja kutsut.");
+    expect(status).toHaveTextContent("Ei roskapostia. Vain olennaiset päivitykset ja kutsut.");
     expect(
-      screen.getByRole("group", { name: "Mika toiminnallisuus kiinnostaa eniten?" })
+      screen.getByRole("group", { name: "Mikä toiminnallisuus kiinnostaa eniten?" })
     ).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: defaultFeatureLabel })).toBeInTheDocument();
-    expect(screen.getByLabelText("Sahkoposti")).toBeInTheDocument();
+    expect(screen.getByLabelText("Sähköposti")).toBeInTheDocument();
     await waitFor(() => {
       expect(gtagMock).toHaveBeenCalledWith("event", "page_view");
     });
@@ -55,7 +55,7 @@ describe("Home landing page", () => {
     render(<Home />);
     const status = screen.getByRole("status");
 
-    await user.type(screen.getByLabelText("Sahkoposti"), "valid@example.com");
+    await user.type(screen.getByLabelText("Sähköposti"), "valid@example.com");
     await user.click(screen.getByRole("button", { name: "Liity odotuslistalle" }));
 
     expect(fetchMock).not.toHaveBeenCalled();
@@ -71,11 +71,11 @@ describe("Home landing page", () => {
     const status = screen.getByRole("status");
 
     await selectTopFeatureInterest(user);
-    await user.type(screen.getByLabelText("Sahkoposti"), "invalid-email");
+    await user.type(screen.getByLabelText("Sähköposti"), "invalid-email");
     await user.click(screen.getByRole("button", { name: "Liity odotuslistalle" }));
 
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(status).toHaveTextContent("Anna kelvollinen sahkopostiosoite.");
+    expect(status).toHaveTextContent("Anna kelvollinen sähköpostiosoite.");
     expect(gtagMock).toHaveBeenCalledWith("event", "signup_submit", {
       top_feature_interest: "friend_leagues"
     });
@@ -99,7 +99,7 @@ describe("Home landing page", () => {
     const status = screen.getByRole("status");
 
     await selectTopFeatureInterest(user);
-    await user.type(screen.getByLabelText("Sahkoposti"), "Hello@Example.com ");
+    await user.type(screen.getByLabelText("Sähköposti"), "Hello@Example.com ");
     await user.click(screen.getByRole("button", { name: "Liity odotuslistalle" }));
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -126,11 +126,11 @@ describe("Home landing page", () => {
     const status = screen.getByRole("status");
 
     await selectTopFeatureInterest(user);
-    await user.type(screen.getByLabelText("Sahkoposti"), "user@example.com");
+    await user.type(screen.getByLabelText("Sähköposti"), "user@example.com");
     await user.click(screen.getByRole("button", { name: "Liity odotuslistalle" }));
 
     expect(status).toHaveTextContent(
-      "Sahkopostiosoite ei kelpaa. Tarkista osoite ja yrita uudelleen."
+      "Sähköpostiosoite ei kelpaa. Tarkista osoite ja yritä uudelleen."
     );
     expect(gtagMock).toHaveBeenCalledWith("event", "signup_submit", {
       top_feature_interest: "friend_leagues"
@@ -148,11 +148,11 @@ describe("Home landing page", () => {
     const status = screen.getByRole("status");
 
     await selectTopFeatureInterest(user);
-    await user.type(screen.getByLabelText("Sahkoposti"), "user@example.com");
+    await user.type(screen.getByLabelText("Sähköposti"), "user@example.com");
     await user.click(screen.getByRole("button", { name: "Liity odotuslistalle" }));
 
     expect(status).toHaveTextContent(
-      "Yhteys katkesi. Tarkista verkkoyhteys ja yrita uudelleen."
+      "Yhteys katkesi. Tarkista verkkoyhteys ja yritä uudelleen."
     );
     expect(gtagMock).toHaveBeenCalledWith("event", "signup_submit", {
       top_feature_interest: "friend_leagues"
