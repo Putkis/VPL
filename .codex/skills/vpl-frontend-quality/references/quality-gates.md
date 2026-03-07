@@ -17,6 +17,14 @@
 - Keep semantic headings and labels.
 - Keep keyboard navigation intact.
 - Keep form errors connected to inputs.
+- Keep interactive elements identifiable by accessible role and name.
+
+## Locator and testability gates
+
+- Prefer role/name and label-based selectors in UI tests.
+- Add stable `data-testid` only where semantic selectors are not reliable.
+- Keep `data-testid` names descriptive and stable across refactors.
+- Avoid brittle selectors (`nth-child`, deep CSS chains, volatile copy text).
 
 ## Data and validation gates
 
@@ -34,6 +42,7 @@
 
 - Add or update unit tests for logic changes.
 - Add or update e2e/smoke test for critical flow changes.
+- Use accessibility-first locators in e2e/smoke tests, with `data-testid` as fallback.
 - Verify acceptance criteria manually when automation is missing.
 - Run `pnpm test` and require a passing result before marking PR review-ready.
 - Run `pnpm test:coverage` and require a passing result before marking PR review-ready.
