@@ -8,22 +8,24 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
-  const plausibleDomain = process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN?.trim();
-  const isPlausibleEnabled = Boolean(plausibleDomain);
+  const gaMeasurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID?.trim();
+  const isGaEnabled = Boolean(gaMeasurementId);
 
   return (
     <html lang="en">
       <body>
-        {isPlausibleEnabled ? (
+        {isGaEnabled ? (
           <>
-            <script>
-              {"window.plausible=window.plausible||function(){(window.plausible.q=window.plausible.q||[]).push(arguments)};"}
-            </script>
             <script
-              defer
-              data-domain={plausibleDomain}
-              src="https://plausible.io/js/script.js"
+              async
+              src={`https://www.googletagmanager.com/gtag/js?id=${gaMeasurementId}`}
             />
+            <script
+            >{`window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+window.gtag = gtag;
+gtag('js', new Date());
+gtag('config', '${gaMeasurementId}');`}</script>
           </>
         ) : null}
         {children}

@@ -3,19 +3,19 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import RootLayout from "../../src/app/layout";
 
-const originalDomain = process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN;
+const originalMeasurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 
 describe("RootLayout", () => {
   beforeEach(() => {
-    process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN = originalDomain;
+    process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID = originalMeasurementId;
   });
 
   afterAll(() => {
-    process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN = originalDomain;
+    process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID = originalMeasurementId;
   });
 
   it("wraps children in html and body tags", () => {
-    delete process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN;
+    delete process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 
     const html = renderToStaticMarkup(
       <RootLayout>
@@ -30,8 +30,8 @@ describe("RootLayout", () => {
     expect(html).toContain("</html>");
   });
 
-  it("adds Plausible script tags when domain is configured", () => {
-    process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN = "vpl.example.com";
+  it("adds GA script tags when measurement id is configured", () => {
+    process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID = "G-TEST123";
 
     const html = renderToStaticMarkup(
       <RootLayout>
@@ -39,8 +39,8 @@ describe("RootLayout", () => {
       </RootLayout>
     );
 
-    expect(html).toContain("https://plausible.io/js/script.js");
-    expect(html).toContain("data-domain=\"vpl.example.com\"");
-    expect(html).toContain("window.plausible=window.plausible||function()");
+    expect(html).toContain("https://www.googletagmanager.com/gtag/js?id=G-TEST123");
+    expect(html).toContain("window.dataLayer = window.dataLayer || [];");
+    expect(html).toContain("gtag('config', 'G-TEST123');");
   });
 });

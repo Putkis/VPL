@@ -5,26 +5,23 @@ import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import Home from "../../src/app/page";
 
 const fetchMock = vi.fn();
-const plausibleMock = vi.fn();
+const gtagMock = vi.fn();
 
-type WindowWithPlausible = Window & {
-  plausible?: (
-    eventName: string,
-    options?: { props?: Record<string, string | number | boolean> }
-  ) => void;
+type WindowWithGtag = Window & {
+  gtag?: (...args: unknown[]) => void;
 };
 
 describe("Home landing page", () => {
   beforeEach(() => {
     fetchMock.mockReset();
-    plausibleMock.mockReset();
+    gtagMock.mockReset();
     vi.stubGlobal("fetch", fetchMock);
-    (window as WindowWithPlausible).plausible = plausibleMock;
+    (window as WindowWithGtag).gtag = gtagMock;
   });
 
   afterAll(() => {
     vi.unstubAllGlobals();
-    delete (window as WindowWithPlausible).plausible;
+    delete (window as WindowWithGtag).gtag;
   });
 
   it("renders hero content and default status text", async () => {
@@ -39,7 +36,7 @@ describe("Home landing page", () => {
     expect(status).toHaveTextContent("Ei roskapostia. Vain olennaiset paivitykset ja kutsut.");
     expect(screen.getByLabelText("Sahkoposti")).toBeInTheDocument();
     await waitFor(() => {
-      expect(plausibleMock).toHaveBeenCalledWith("page_view");
+      expect(gtagMock).toHaveBeenCalledWith("event", "page_view");
     });
   });
 
@@ -53,9 +50,9 @@ describe("Home landing page", () => {
 
     expect(fetchMock).not.toHaveBeenCalled();
     expect(status).toHaveTextContent("Anna kelvollinen sahkopostiosoite.");
-    expect(plausibleMock).toHaveBeenCalledWith("signup_submit");
-    expect(plausibleMock).toHaveBeenCalledWith("signup_error", {
-      props: { reason: "invalid_email" }
+    expect(gtagMock).toHaveBeenCalledWith("event", "signup_submit");
+    expect(gtagMock).toHaveBeenCalledWith("event", "signup_error", {
+      reason: "invalid_email"
     });
   });
 
@@ -83,8 +80,8 @@ describe("Home landing page", () => {
       body: JSON.stringify({ email: "hello@example.com" })
     });
     expect(status).toHaveTextContent("Kiitos! Olet nyt odotuslistalla.");
-    expect(plausibleMock).toHaveBeenCalledWith("signup_submit");
-    expect(plausibleMock).toHaveBeenCalledWith("signup_success");
+    expect(gtagMock).toHaveBeenCalledWith("event", "signup_submit");
+    expect(gtagMock).toHaveBeenCalledWith("event", "signup_success");
   });
 
   it("shows backend validation message on 400 response", async () => {
@@ -100,9 +97,9 @@ describe("Home landing page", () => {
     expect(status).toHaveTextContent(
       "Sahkopostiosoite ei kelpaa. Tarkista osoite ja yrita uudelleen."
     );
-    expect(plausibleMock).toHaveBeenCalledWith("signup_submit");
-    expect(plausibleMock).toHaveBeenCalledWith("signup_error", {
-      props: { reason: "invalid_email" }
+    expect(gtagMock).toHaveBeenCalledWith("event", "signup_submit");
+    expect(gtagMock).toHaveBeenCalledWith("event", "signup_error", {
+      reason: "invalid_email"
     });
   });
 
@@ -119,9 +116,9 @@ describe("Home landing page", () => {
     expect(status).toHaveTextContent(
       "Yhteys katkesi. Tarkista verkkoyhteys ja yrita uudelleen."
     );
-    expect(plausibleMock).toHaveBeenCalledWith("signup_submit");
-    expect(plausibleMock).toHaveBeenCalledWith("signup_error", {
-      props: { reason: "network_error" }
+    expect(gtagMock).toHaveBeenCalledWith("event", "signup_submit");
+    expect(gtagMock).toHaveBeenCalledWith("event", "signup_error", {
+      reason: "network_error"
     });
   });
 });

@@ -58,13 +58,13 @@ See [`docs/adr/`](docs/adr/) for the locked decisions and rationale.
 
 - Cloud Scheduler setup: [`docs/operations/cloud-scheduler.md`](docs/operations/cloud-scheduler.md)
 
-## Analytics Tracking (Plausible)
+## Analytics Tracking (Google Analytics 4)
 
-This project uses Plausible for funnel tracking on the landing page.
+This project uses Google Analytics 4 (GA4) for funnel tracking on the landing page.
 
 Required env var:
 
-- `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` (for example `vpl.example.com`)
+- `NEXT_PUBLIC_GA_MEASUREMENT_ID` (for example `G-XXXXXXXXXX`)
 
 Tracked events:
 
