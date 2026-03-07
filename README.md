@@ -71,9 +71,26 @@ Tracked events:
 - `page_view`
 - `signup_submit`
 - `signup_success`
-- `signup_error` (with `reason`: `invalid_email`, `server_error`, or `network_error`)
+- `signup_error` (with `reason`: `invalid_feature_interest`, `invalid_email`, `server_error`, or `network_error`)
 
 Conversion dashboard setup:
 
 - Use `signup_success / page_view` as the core conversion ratio.
 - Segment by `signup_error.reason` to see where drop-offs happen.
+
+## Waitlist Validation Signal + CSV Export
+
+Waitlist signup includes one required multiple-choice validation question:
+
+- `topFeatureInterest` options:
+  - `live_scores`
+  - `player_stats`
+  - `friend_leagues`
+  - `transfer_tools`
+  - `other`
+
+Admin CSV export endpoint:
+
+- `GET /api/admin/waitlist/export`
+- Required header: `x-admin-export-token: <WAITLIST_EXPORT_TOKEN>`
+- Output columns: `email,top_feature_interest,created_at`

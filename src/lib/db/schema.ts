@@ -17,5 +17,6 @@ export const teams = pgTable("teams", {
 export const waitlistSignups = pgTable("waitlist_signups", {
   id: uuid("id").primaryKey().defaultRandom(),
   email: text("email").notNull().unique(),
+  topFeatureInterest: text("top_feature_interest").notNull().default("other"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull()
 });

@@ -10,9 +10,30 @@ const highlights = [
   "Saat viikottaiset paivitykset kehityksesta ja julkaisuaikataulusta."
 ];
 
+const topFeatureInterestValues = [
+  "live_scores",
+  "player_stats",
+  "friend_leagues",
+  "transfer_tools",
+  "other"
+] as const;
+
+const topFeatureInterestOptions: Array<{
+  value: (typeof topFeatureInterestValues)[number];
+  label: string;
+}> = [
+  { value: "live_scores", label: "Live-pisteet ottelupaivan aikana" },
+  { value: "player_stats", label: "Syvemmat pelaajatilastot" },
+  { value: "friend_leagues", label: "Kaveriliigat ja haastot" },
+  { value: "transfer_tools", label: "Paremmat siirto- ja kokoonpanotyokalut" },
+  { value: "other", label: "Jokin muu" }
+];
+
 type FormStatus = "idle" | "submitting" | "success" | "error";
 
 const emailSchema = z.string().email();
+const topFeatureInterestSchema = z.enum(topFeatureInterestValues);
+type TopFeatureInterest = z.infer<typeof topFeatureInterestSchema>;
 
 function getStatusMessage(status: FormStatus, errorMessage: string) {
   if (status === "success") {
@@ -28,6 +49,7 @@ function getStatusMessage(status: FormStatus, errorMessage: string) {
 
 export default function Home() {
   const [email, setEmail] = useState("");
+  const [topFeatureInterest, setTopFeatureInterest] = useState<TopFeatureInterest | "">("");
   const [status, setStatus] = useState<FormStatus>("idle");
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -38,7 +60,19 @@ export default function Home() {
   function submitWaitlist(event: React.SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
     const normalizedEmail = email.trim().toLowerCase();
-    trackEvent("signup_submit");
+    const parsedTopFeatureInterest = topFeatureInterestSchema.safeParse(topFeatureInterest);
+
+    if (!parsedTopFeatureInterest.success) {
+      setStatus("error");
+      setErrorMessage("Valitse sinua eniten kiinnostava toiminnallisuus.");
+      trackEvent("signup_error", { reason: "invalid_feature_interest" });
+      return;
+    }
+
+    const selectedFeatureInterest = parsedTopFeatureInterest.data;
+    trackEvent("signup_submit", {
+      top_feature_interest: selectedFeatureInterest
+    });
 
     if (!emailSchema.safeParse(normalizedEmail).success) {
       setStatus("error");
@@ -57,14 +91,31 @@ export default function Home() {
           headers: {
             "Content-Type": "application/json"
           },
-          body: JSON.stringify({ email: normalizedEmail })
+          body: JSON.stringify({
+            email: normalizedEmail,
+            topFeatureInterest: selectedFeatureInterest
+          })
         });
 
         if (!response.ok) {
-          const reason = response.status === 400 ? "invalid_email" : "server_error";
+          let invalidCode = "invalid_email";
+          if (response.status === 400) {
+            try {
+              const responsePayload = (await response.json()) as { code?: string };
+              if (responsePayload.code === "invalid_feature_interest") {
+                invalidCode = "invalid_feature_interest";
+              }
+            } catch {
+              invalidCode = "invalid_email";
+            }
+          }
+
+          const reason = response.status === 400 ? invalidCode : "server_error";
           setStatus("error");
           setErrorMessage(
-            response.status === 400
+            reason === "invalid_feature_interest"
+              ? "Valitse sinua eniten kiinnostava toiminnallisuus."
+              : response.status === 400
               ? "Sahkopostiosoite ei kelpaa. Tarkista osoite ja yrita uudelleen."
               : "Tallennus ei onnistunut. Yrita hetken paasta uudelleen."
           );
@@ -74,6 +125,7 @@ export default function Home() {
 
         setStatus("success");
         setEmail("");
+        setTopFeatureInterest("");
         trackEvent("signup_success");
       } catch {
         setStatus("error");
@@ -93,6 +145,29 @@ export default function Home() {
           tuotteen ydinominaisuuksiin.
         </p>
         <form className="waitlist-form" onSubmit={submitWaitlist} noValidate>
+          <fieldset className="feature-question">
+            <legend>Mika toiminnallisuus kiinnostaa eniten?</legend>
+            <div className="feature-options">
+              {topFeatureInterestOptions.map((option) => (
+                <label key={option.value} className="feature-option">
+                  <input
+                    type="radio"
+                    name="top-feature-interest"
+                    value={option.value}
+                    checked={topFeatureInterest === option.value}
+                    onChange={(event) => {
+                      setTopFeatureInterest(event.target.value as TopFeatureInterest);
+                      if (status !== "submitting") {
+                        setStatus("idle");
+                        setErrorMessage("");
+                      }
+                    }}
+                  />
+                  <span>{option.label}</span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
           <label htmlFor="waitlist-email">Sahkoposti</label>
           <div className="input-row">
             <input

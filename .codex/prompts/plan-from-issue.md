@@ -1,4 +1,5 @@
 Use the VPL project quality skills as needed:
+
 - $vpl-frontend-quality
 - $vpl-backend-quality
 - $vpl-ops-quality
@@ -8,6 +9,7 @@ Read GitHub issue #<NUMBER> from this repository and produce an implementation p
 Do not make code changes in this step.
 
 Output format:
+
 1. Scope
 2. Non-goals
 3. Dependencies and blockers
@@ -19,6 +21,8 @@ Output format:
 9. Step-by-step execution order
 
 Requirements:
+
 - Map every plan item to the issue acceptance criteria.
 - Call out assumptions explicitly.
 - Flag missing information before implementation starts.
+- Ask permission to implement the plan.

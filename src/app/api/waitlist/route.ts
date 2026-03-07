@@ -3,8 +3,17 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { readServerEnv } from "../../../lib/env.server";
 
+const featureInterestOptions = [
+  "live_scores",
+  "player_stats",
+  "friend_leagues",
+  "transfer_tools",
+  "other"
+] as const;
+
 const waitlistPayloadSchema = z.object({
-  email: z.string().trim().email().max(254)
+  email: z.string().trim().email().max(254),
+  topFeatureInterest: z.enum(featureInterestOptions)
 });
 
 type WaitlistPayload = z.infer<typeof waitlistPayloadSchema>;
@@ -44,8 +53,13 @@ export async function POST(request: Request) {
 
   const parsedPayload = waitlistPayloadSchema.safeParse(body);
   if (!parsedPayload.success) {
+    const hasEmailError = parsedPayload.error.issues.some(
+      (issue) => issue.path[0] === "email"
+    );
+    const errorCode = hasEmailError ? "invalid_email" : "invalid_feature_interest";
+
     return NextResponse.json(
-      { ok: false, code: "invalid_email" },
+      { ok: false, code: errorCode },
       { status: 400 }
     );
   }

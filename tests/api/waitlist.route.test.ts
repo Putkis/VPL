@@ -41,6 +41,11 @@ function createPostRequest(body: unknown) {
 }
 
 describe("POST /api/waitlist", () => {
+  const validPayload = {
+    email: "hello@example.com",
+    topFeatureInterest: "friend_leagues"
+  };
+
   beforeEach(() => {
     createClientMock.mockClear();
     fromMock.mockClear();
@@ -48,8 +53,8 @@ describe("POST /api/waitlist", () => {
     upsertMock.mockResolvedValue({ error: null });
   });
 
-  it("stores a valid email", async () => {
-    const response = await POST(createPostRequest({ email: "hello@example.com" }));
+  it("stores a valid waitlist payload", async () => {
+    const response = await POST(createPostRequest(validPayload));
     const payload = await response.json();
 
     expect(response.status).toBe(201);
@@ -57,17 +62,45 @@ describe("POST /api/waitlist", () => {
     expect(createClientMock).toHaveBeenCalledTimes(1);
     expect(fromMock).toHaveBeenCalledWith("waitlist_signups");
     expect(upsertMock).toHaveBeenCalledWith(
-      { email: "hello@example.com" },
+      validPayload,
       { onConflict: "email", ignoreDuplicates: true }
     );
   });
 
   it("rejects an invalid email", async () => {
-    const response = await POST(createPostRequest({ email: "invalid-email" }));
+    const response = await POST(
+      createPostRequest({
+        email: "invalid-email",
+        topFeatureInterest: "friend_leagues"
+      })
+    );
     const payload = await response.json();
 
     expect(response.status).toBe(400);
     expect(payload).toEqual({ ok: false, code: "invalid_email" });
+    expect(createClientMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects a missing top feature interest", async () => {
+    const response = await POST(createPostRequest({ email: "hello@example.com" }));
+    const payload = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(payload).toEqual({ ok: false, code: "invalid_feature_interest" });
+    expect(createClientMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects an invalid top feature interest option", async () => {
+    const response = await POST(
+      createPostRequest({
+        email: "hello@example.com",
+        topFeatureInterest: "unknown"
+      })
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(payload).toEqual({ ok: false, code: "invalid_feature_interest" });
     expect(createClientMock).not.toHaveBeenCalled();
   });
 
@@ -90,7 +123,7 @@ describe("POST /api/waitlist", () => {
       error: { message: "db down" }
     });
 
-    const response = await POST(createPostRequest({ email: "hello@example.com" }));
+    const response = await POST(createPostRequest(validPayload));
     const payload = await response.json();
 
     expect(response.status).toBe(500);
