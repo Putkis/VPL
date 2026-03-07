@@ -9,30 +9,140 @@
 
 body {
   margin: 0;
-  background: #f7f9fb;
-  color: #101418;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top right, #d7e6ff 0%, transparent 45%),
+    radial-gradient(circle at bottom left, #c8f5df 0%, transparent 35%),
+    #f6f8fb;
+  color: #0f1720;
 }
 
-.page {
-  max-width: 760px;
+.landing {
+  width: min(920px, 100% - 2rem);
   margin: 3rem auto;
-  padding: 0 1rem;
+  display: grid;
+  gap: 1.5rem;
+}
+
+.hero,
+.highlights {
+  background: #ffffff;
+  border: 1px solid #dbe4f0;
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 10px 25px -20px rgba(25, 45, 84, 0.45);
+}
+
+.eyebrow {
+  margin: 0;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #0a6b63;
+  font-weight: 700;
 }
 
 h1 {
-  margin: 0 0 0.75rem;
+  margin: 0.7rem 0;
+  font-size: clamp(1.8rem, 3.8vw, 2.6rem);
+  line-height: 1.12;
 }
 
-p {
-  margin: 0 0 1rem;
+.lead {
+  margin: 0 0 1.25rem;
+  max-width: 62ch;
+  color: #2b3c4f;
 }
 
-ul {
+.waitlist-form label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.input-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.input-row input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.8rem 0.9rem;
+  border-radius: 10px;
+  border: 1px solid #b5c6db;
+  font: inherit;
+}
+
+.input-row input:focus {
+  outline: 2px solid #3f83f8;
+  outline-offset: 1px;
+}
+
+.input-row button {
+  border: 0;
+  border-radius: 10px;
+  padding: 0.8rem 1rem;
+  font: inherit;
+  font-weight: 700;
+  color: #fff;
+  background: #0057d8;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.input-row button[disabled] {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.status {
+  margin: 0.75rem 0 0;
+  min-height: 1.4rem;
+  font-size: 0.95rem;
+}
+
+.status-success {
+  color: #05603a;
+}
+
+.status-error {
+  color: #b42318;
+}
+
+.status-idle,
+.status-submitting {
+  color: #475467;
+}
+
+.highlights ul {
   margin: 0;
   padding-left: 1.2rem;
+  display: grid;
+  gap: 0.7rem;
 }
 
-li {
-  margin: 0.35rem 0;
+.highlights li {
+  color: #223447;
 }
 
+@media (max-width: 700px) {
+  .landing {
+    margin: 1rem auto 2rem;
+    width: min(920px, 100% - 1rem);
+  }
+
+  .hero,
+  .highlights {
+    border-radius: 12px;
+    padding: 1rem;
+  }
+
+  .input-row {
+    flex-direction: column;
+  }
+
+  .input-row button {
+    width: 100%;
+  }
+}

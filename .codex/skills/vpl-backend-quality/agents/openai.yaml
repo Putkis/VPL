@@ -1,0 +1,4 @@
+interface:
+  display_name: "VPL Backend Quality"
+  short_description: "Consistent API and data quality gates for VPL backend"
+  default_prompt: "Use $vpl-backend-quality to implement a backend issue with consistent quality checks."
