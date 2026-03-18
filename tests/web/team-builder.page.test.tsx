@@ -22,4 +22,16 @@ describe("TeamBuilder", () => {
 
     expect(screen.getByRole("status")).toHaveTextContent("Valitse tasan 7 pelaajaa.");
   });
+
+  it("shows lock state for already started gameweeks", async () => {
+    const user = userEvent.setup();
+    render(<TeamBuilder players={getPlayerCatalog()} />);
+
+    await user.selectOptions(screen.getByLabelText("Gameweek"), "gw-2");
+
+    expect(
+      screen.getByText("Valittu gameweek on lukittu. API hylkaa tallennuksen deadline-ajan jalkeen.")
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Tallenna joukkue" })).toBeDisabled();
+  });
 });
