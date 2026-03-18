@@ -14,6 +14,16 @@ function createPostRequest(body: unknown) {
   });
 }
 
+function createRawPostRequest(body: string) {
+  return new Request("http://localhost/api/team", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body
+  });
+}
+
 describe("POST /api/team", () => {
   const balancedIds = getPlayerCatalog()
     .filter((player) =>
@@ -25,6 +35,20 @@ describe("POST /api/team", () => {
         "Leo Laine",
         "Eetu Koski",
         "Samu Virtanen"
+      ].includes(player.name)
+    )
+    .map((player) => player.id);
+
+  const expensiveIds = getPlayerCatalog()
+    .filter((player) =>
+      [
+        "Luke Hakala",
+        "Juho Lehto",
+        "Matti Kallio",
+        "Oskar Niemi",
+        "Leo Laine",
+        "Eetu Koski",
+        "Vilho Salo"
       ].includes(player.name)
     )
     .map((player) => player.id);
@@ -55,5 +79,44 @@ describe("POST /api/team", () => {
 
     expect(response.status).toBe(400);
     expect(payload).toEqual({ ok: false, code: "unknown_player" });
+  });
+
+  it("rejects malformed JSON payloads", async () => {
+    const response = await POST(createRawPostRequest("{"));
+
+    const payload = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(payload).toEqual({ ok: false, code: "invalid_payload" });
+  });
+
+  it("rejects invalid team payloads before catalog lookup", async () => {
+    const response = await POST(
+      createPostRequest({
+        teamName: "No",
+        playerIds: []
+      })
+    );
+
+    const payload = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(payload).toEqual({ ok: false, code: "invalid_team" });
+  });
+
+  it("rejects balanced squads that exceed the budget", async () => {
+    const response = await POST(
+      createPostRequest({
+        teamName: "Liian kallis",
+        playerIds: expensiveIds
+      })
+    );
+
+    const payload = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(payload.ok).toBe(false);
+    expect(payload.code).toBe("budget_exceeded");
+    expect(payload.message).toContain("Budjetti ylittyy");
   });
 });
