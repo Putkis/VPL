@@ -18,6 +18,20 @@ export type SeedPlayerStat = {
   bonusPoints: number;
 };
 
+export type SeedFriendLeague = {
+  id: string;
+  name: string;
+  slug: string;
+  inviteCode: string;
+  ownerUserId: string;
+};
+
+export type SeedFriendLeagueMember = {
+  leagueId: string;
+  userId: string;
+  teamId: string;
+};
+
 export const seedFantasyTeams: SeedFantasyTeam[] = [
   {
     id: "40000000-0000-4000-8000-000000000001",
@@ -60,6 +74,46 @@ export const seedFantasyTeams: SeedFantasyTeam[] = [
       "20000000-0000-4000-8000-000000000007",
       "20000000-0000-4000-8000-000000000008"
     ]
+  }
+];
+
+export const seedFriendLeagues: SeedFriendLeague[] = [
+  {
+    id: "50000000-0000-4000-8000-000000000001",
+    name: "South Stand",
+    slug: "south-stand",
+    inviteCode: "SOUTH26",
+    ownerUserId: "00000000-0000-4000-8000-000000000001"
+  },
+  {
+    id: "50000000-0000-4000-8000-000000000002",
+    name: "Data Nerds",
+    slug: "data-nerds",
+    inviteCode: "DATA26",
+    ownerUserId: "00000000-0000-4000-8000-000000000002"
+  }
+];
+
+export const seedFriendLeagueMembers: SeedFriendLeagueMember[] = [
+  {
+    leagueId: "50000000-0000-4000-8000-000000000001",
+    userId: "00000000-0000-4000-8000-000000000001",
+    teamId: "40000000-0000-4000-8000-000000000001"
+  },
+  {
+    leagueId: "50000000-0000-4000-8000-000000000001",
+    userId: "00000000-0000-4000-8000-000000000002",
+    teamId: "40000000-0000-4000-8000-000000000002"
+  },
+  {
+    leagueId: "50000000-0000-4000-8000-000000000001",
+    userId: "00000000-0000-4000-8000-000000000003",
+    teamId: "40000000-0000-4000-8000-000000000003"
+  },
+  {
+    leagueId: "50000000-0000-4000-8000-000000000002",
+    userId: "00000000-0000-4000-8000-000000000002",
+    teamId: "40000000-0000-4000-8000-000000000002"
   }
 ];
 

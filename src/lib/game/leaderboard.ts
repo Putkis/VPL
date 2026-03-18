@@ -1,11 +1,8 @@
 import { seedFantasyTeams } from "./mock-league";
 import { buildOverallTable, buildTeamGameweekScores } from "./scoring";
+import { getDefaultFriendTeamIds } from "./leagues";
 
 const defaultViewerTeamId = "40000000-0000-4000-8000-000000000001";
-const defaultFriendTeamIds = [
-  "40000000-0000-4000-8000-000000000002",
-  "40000000-0000-4000-8000-000000000003"
-];
 
 export type LeaderboardScope = "global" | "friends";
 
@@ -18,7 +15,7 @@ export function getLeaderboard(scope: LeaderboardScope) {
   const filtered =
     scope === "friends"
       ? baseTable.filter((entry) =>
-          [defaultViewerTeamId, ...defaultFriendTeamIds].includes(entry.teamId)
+          [defaultViewerTeamId, ...getDefaultFriendTeamIds()].includes(entry.teamId)
         )
       : baseTable;
 
