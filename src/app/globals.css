@@ -352,6 +352,29 @@ h1 {
   background: #effcf7;
 }
 
+.leaderboard-table {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.leaderboard-row {
+  display: grid;
+  grid-template-columns: 80px minmax(0, 1fr) 120px 120px;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.85rem 1rem;
+  border-radius: 12px;
+  background: #f8fbff;
+}
+
+.leaderboard-head {
+  background: #edf2fb;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #49627f;
+}
+
 @media (max-width: 700px) {
   .landing {
     margin: 1rem auto 2rem;
