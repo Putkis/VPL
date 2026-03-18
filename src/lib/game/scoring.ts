@@ -1,6 +1,7 @@
 import { getPlayerCatalog } from "./catalog";
 import { seedGameweeks } from "./seed-data";
-import { seedFantasyTeams, seedPlayerGameweekStats, SeedPlayerStat } from "./mock-league";
+import { seedFantasyTeams, SeedPlayerStat } from "./mock-league";
+import { getResolvedPlayerStats } from "./results-store";
 
 export function calculatePlayerScore(position: string, stat: SeedPlayerStat) {
   const appearancePoints =
@@ -37,8 +38,7 @@ export function buildPlayerScoreBreakdown(gameweekSlug: string) {
     return [];
   }
 
-  return seedPlayerGameweekStats
-    .filter((stat) => stat.gameweekId === gameweek.id)
+  return getResolvedPlayerStats(gameweekSlug)
     .map((stat) => {
       const player = playersById.get(stat.playerId);
       if (!player) {
