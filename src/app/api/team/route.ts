@@ -114,6 +114,10 @@ export async function GET(request: Request) {
     return NextResponse.json({ ok: false, code: "invalid_viewer" }, { status: 400 });
   }
 
+  if (!getGameweekBySlug(gameweekSlug)) {
+    return buildUnknownGameweekResponse();
+  }
+
   const team = getStoredTeam(viewerKey, gameweekSlug);
   if (!team) {
     return NextResponse.json({ ok: true, team: null });

@@ -89,6 +89,8 @@ export function AdminResultsPanel() {
   const [statsJson, setStatsJson] = useState(getSeededJsonExample("gw-2"));
   const [status, setStatus] = useState("Lataa JSON-esimerkki, muokkaa tarvittaessa ja tallenna.");
   const [scoreSummary, setScoreSummary] = useState<ScoreRunPayload | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isScoring, setIsScoring] = useState(false);
 
   useEffect(() => {
     setViewerKey(getViewerKey());
@@ -99,6 +101,11 @@ export function AdminResultsPanel() {
   }, [gameweekSlug]);
 
   async function saveResults() {
+    if (isSaving || isScoring) {
+      return;
+    }
+
+    setIsSaving(true);
     try {
       const stats = JSON.parse(statsJson) as AdminStatLine[];
       const response = await fetch("/api/admin/results", {
@@ -126,30 +133,41 @@ export function AdminResultsPanel() {
       setStatus(`Tulokset tallennettu. Riveja ${payload.savedStatCount ?? 0}.`);
     } catch {
       setStatus("JSON ei ole kelvollinen.");
+    } finally {
+      setIsSaving(false);
     }
   }
 
   async function runScoring() {
-    const response = await fetch("/api/admin/results/score", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        viewerKey,
-        gameweekSlug
-      })
-    });
-
-    const payload = (await response.json()) as ScoreRunPayload;
-    if (!response.ok) {
-      setStatus(payload.message ?? "Pisteytyksen kaynnistys epaonnistui.");
-      setScoreSummary(null);
+    if (isSaving || isScoring) {
       return;
     }
 
-    setScoreSummary(payload);
-    setStatus(`Pisteytys ajettu gameweekille ${gameweekSlug}.`);
+    setIsScoring(true);
+    try {
+      const response = await fetch("/api/admin/results/score", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          viewerKey,
+          gameweekSlug
+        })
+      });
+
+      const payload = (await response.json()) as ScoreRunPayload;
+      if (!response.ok) {
+        setStatus(payload.message ?? "Pisteytyksen kaynnistys epaonnistui.");
+        setScoreSummary(null);
+        return;
+      }
+
+      setScoreSummary(payload);
+      setStatus(`Pisteytys ajettu gameweekille ${gameweekSlug}.`);
+    } finally {
+      setIsScoring(false);
+    }
   }
 
   return (
@@ -190,11 +208,21 @@ export function AdminResultsPanel() {
         </label>
 
         <div className="builder-summary">
-          <button type="button" className="auth-submit" onClick={saveResults}>
-            Tallenna tulokset
+          <button
+            type="button"
+            className="auth-submit"
+            onClick={saveResults}
+            disabled={isSaving || isScoring}
+          >
+            {isSaving ? "Tallennetaan..." : "Tallenna tulokset"}
           </button>
-          <button type="button" className="auth-submit secondary-button" onClick={runScoring}>
-            Kaynnista pisteytys
+          <button
+            type="button"
+            className="auth-submit secondary-button"
+            onClick={runScoring}
+            disabled={isSaving || isScoring}
+          >
+            {isScoring ? "Ajetaan..." : "Kaynnista pisteytys"}
           </button>
         </div>
 

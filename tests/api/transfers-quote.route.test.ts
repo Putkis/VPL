@@ -24,4 +24,20 @@ describe("POST /api/transfers/quote", () => {
     expect(response.status).toBe(200);
     expect(payload.penaltyPoints).toBe(4);
   });
+
+  it("returns 400 for malformed JSON payloads", async () => {
+    const response = await POST(
+      new Request("http://localhost/api/transfers/quote", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: "{"
+      })
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(payload).toEqual({ ok: false, code: "invalid_transfer" });
+  });
 });

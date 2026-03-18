@@ -97,6 +97,65 @@ describe("TeamBuilder", () => {
     expect(screen.getByRole("button", { name: "Paivita joukkue" })).toBeInTheDocument();
   });
 
+  it("clears stale selections when the next gameweek has no saved team", async () => {
+    const savedPlayerIds = getPlayerCatalog()
+      .filter((player) => ["Luke Hakala", "Juho Lehto", "Matti Kallio"].includes(player.name))
+      .map((player) => player.id);
+
+    fetchMock.mockImplementation(async (input: string, init?: { method?: string }) => {
+      if (!init?.method || init.method === "GET") {
+        if (input.includes("gameweek=gw-3")) {
+          return {
+            ok: true,
+            json: async () => ({
+              ok: true,
+              team: {
+                viewerKey: "demo@local.vpl",
+                name: "Tallennettu XI",
+                teamName: "Tallennettu XI",
+                playerIds: savedPlayerIds,
+                gameweekSlug: "gw-3",
+                revision: 1,
+                updatedAt: "2026-03-18T00:00:00.000Z"
+              }
+            })
+          };
+        }
+
+        return {
+          ok: true,
+          json: async () => ({ ok: true, team: null })
+        };
+      }
+
+      return {
+        ok: true,
+        json: async () => ({ ok: true, team: null })
+      };
+    });
+
+    const user = userEvent.setup();
+    render(<TeamBuilder players={getPlayerCatalog()} />);
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue("Tallennettu XI")).toBeInTheDocument();
+    });
+
+    await user.selectOptions(screen.getByLabelText("Gameweek"), "gw-1");
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue("Viikon nousijat")).toBeInTheDocument();
+    });
+    expect(screen.getByText("Tallettua joukkuetta ei loytynyt valitulle gameweekille.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Luke Hakala/i })).not.toHaveClass("selected");
+  });
+
+  it("keeps save disabled until the selection is valid", async () => {
+    render(<TeamBuilder players={getPlayerCatalog()} />);
+
+    expect(screen.getByRole("button", { name: "Tallenna joukkue" })).toBeDisabled();
+  });
+
   it("restores the last saved team when an optimistic update fails", async () => {
     const savedPlayerIds = getPlayerCatalog()
       .filter((player) =>
@@ -150,7 +209,6 @@ describe("TeamBuilder", () => {
     const nameInput = screen.getByLabelText("Joukkueen nimi");
     await user.clear(nameInput);
     await user.type(nameInput, "Muutettu nimi");
-    await user.click(screen.getByRole("button", { name: /Samu Virtanen/i }));
     await user.click(screen.getByRole("button", { name: "Paivita joukkue" }));
 
     await waitFor(() => {
