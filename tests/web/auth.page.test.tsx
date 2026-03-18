@@ -11,7 +11,8 @@ const {
   signOutMock,
   getSessionMock,
   unsubscribeMock,
-  onAuthStateChangeMock
+  onAuthStateChangeMock,
+  authStateChangeHandlerRef
 } = vi.hoisted(() => ({
   getSupabaseClientMock: vi.fn(),
   signUpMock: vi.fn(),
@@ -19,7 +20,8 @@ const {
   signOutMock: vi.fn(),
   getSessionMock: vi.fn(),
   unsubscribeMock: vi.fn(),
-  onAuthStateChangeMock: vi.fn()
+  onAuthStateChangeMock: vi.fn(),
+  authStateChangeHandlerRef: { current: null as null | ((_event: string, nextSession: unknown) => void) }
 }));
 
 vi.mock("../../src/lib/supabase/client", () => ({
@@ -35,14 +37,19 @@ describe("AuthPanel", () => {
     getSessionMock.mockReset();
     unsubscribeMock.mockReset();
     onAuthStateChangeMock.mockReset();
+    authStateChangeHandlerRef.current = null;
+    window.localStorage.clear();
 
     getSessionMock.mockResolvedValue({ data: { session: null } });
-    onAuthStateChangeMock.mockReturnValue({
-      data: {
-        subscription: {
-          unsubscribe: unsubscribeMock
+    onAuthStateChangeMock.mockImplementation((handler) => {
+      authStateChangeHandlerRef.current = handler;
+      return {
+        data: {
+          subscription: {
+            unsubscribe: unsubscribeMock
+          }
         }
-      }
+      };
     });
     getSupabaseClientMock.mockImplementation(() => ({
       auth: {
@@ -110,6 +117,7 @@ describe("AuthPanel", () => {
     });
 
     expect(screen.getByText("aino@example.com")).toBeInTheDocument();
+    expect(window.localStorage.getItem("vpl.viewer.email")).toBe("aino@example.com");
 
     await user.click(screen.getByRole("button", { name: "Kirjaudu ulos" }));
 
@@ -117,6 +125,7 @@ describe("AuthPanel", () => {
       expect(signOutMock).toHaveBeenCalled();
     });
     expect(screen.getByRole("status")).toHaveTextContent("Kirjauduit ulos onnistuneesti.");
+    expect(window.localStorage.getItem("vpl.viewer.email")).toBeNull();
   });
 
   it("blocks short passwords before sending auth requests", async () => {
@@ -144,5 +153,31 @@ describe("AuthPanel", () => {
       "Supabase-ymparistomuuttujat puuttuvat"
     );
     expect(screen.getByRole("button", { name: "Luo tili" })).toBeDisabled();
+  });
+
+  it("hydrates the active session from Supabase and syncs auth state changes to viewer storage", async () => {
+    getSessionMock.mockResolvedValue({
+      data: {
+        session: {
+          user: {
+            email: "session@example.com"
+          }
+        }
+      }
+    });
+
+    render(<AuthPanel />);
+
+    await waitFor(() => {
+      expect(screen.getByText("session@example.com")).toBeInTheDocument();
+    });
+    expect(window.localStorage.getItem("vpl.viewer.email")).toBe("session@example.com");
+
+    authStateChangeHandlerRef.current?.("SIGNED_OUT", null);
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Luo tili" })).toBeInTheDocument();
+    });
+    expect(window.localStorage.getItem("vpl.viewer.email")).toBeNull();
   });
 });
