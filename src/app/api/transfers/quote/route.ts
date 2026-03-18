@@ -10,7 +10,11 @@ const transferQuoteSchema = z.object({
 });
 
 export async function POST(request: Request) {
-  const body = await request.json();
+  const body = await request.json().catch(() => null);
+  if (!body) {
+    return NextResponse.json({ ok: false, code: "invalid_transfer" }, { status: 400 });
+  }
+
   const parsed = transferQuoteSchema.safeParse(body);
 
   if (!parsed.success) {

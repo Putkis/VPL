@@ -37,7 +37,8 @@ type SaveTeamResponse = {
 };
 
 export function TeamBuilder({ players }: TeamBuilderProps) {
-  const [teamName, setTeamName] = useState("Viikon nousijat");
+  const defaultTeamName = "Viikon nousijat";
+  const [teamName, setTeamName] = useState(defaultTeamName);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [gameweekSlug, setGameweekSlug] = useState("gw-3");
   const [viewerKey, setViewerKey] = useState("demo@local.vpl");
@@ -60,6 +61,16 @@ export function TeamBuilder({ players }: TeamBuilderProps) {
   const selectedPlayers = players.filter((player) => selectedIds.includes(player.id));
   const validation = validateTeamSelection(selectedPlayers);
   const locked = isGameweekLocked(gameweekSlug);
+  const canSave = validation.ok && !locked && !isLoadingSavedTeam;
+
+  function resetDraftTeam(nextStatus: string, nextLoadStatus: string) {
+    setTeamName(defaultTeamName);
+    setSelectedIds([]);
+    setIsPersisted(false);
+    setLastSavedSnapshot(null);
+    setStatus(nextStatus);
+    setLoadStatus(nextLoadStatus);
+  }
 
   useEffect(() => {
     let isMounted = true;
@@ -78,15 +89,18 @@ export function TeamBuilder({ players }: TeamBuilderProps) {
         }
 
         if (!response.ok) {
-          setLoadStatus("Tallennetun joukkueen lataus epaonnistui.");
-          setIsPersisted(false);
+          resetDraftTeam(
+            "Valitse kokoonpano ja tallenna backend-validaatiolla.",
+            "Tallennetun joukkueen lataus epaonnistui."
+          );
           return;
         }
 
         if (!payload.team) {
-          setLoadStatus("Tallettua joukkuetta ei loytynyt valitulle gameweekille.");
-          setIsPersisted(false);
-          setLastSavedSnapshot(null);
+          resetDraftTeam(
+            "Valitse kokoonpano ja tallenna backend-validaatiolla.",
+            "Tallettua joukkuetta ei loytynyt valitulle gameweekille."
+          );
           return;
         }
 
@@ -105,8 +119,10 @@ export function TeamBuilder({ players }: TeamBuilderProps) {
         );
       } catch {
         if (isMounted) {
-          setLoadStatus("Tallennetun joukkueen lataus epaonnistui.");
-          setIsPersisted(false);
+          resetDraftTeam(
+            "Valitse kokoonpano ja tallenna backend-validaatiolla.",
+            "Tallennetun joukkueen lataus epaonnistui."
+          );
         }
       } finally {
         if (isMounted) {
@@ -188,6 +204,10 @@ export function TeamBuilder({ players }: TeamBuilderProps) {
   }
 
   function togglePlayer(playerId: string) {
+    if (locked || isLoadingSavedTeam) {
+      return;
+    }
+
     setSelectedIds((current) =>
       current.includes(playerId)
         ? current.filter((id) => id !== playerId)
@@ -272,7 +292,7 @@ export function TeamBuilder({ players }: TeamBuilderProps) {
           type="button"
           className="auth-submit"
           onClick={saveTeam}
-          disabled={locked || isLoadingSavedTeam}
+          disabled={!canSave}
         >
           {isPersisted ? "Paivita joukkue" : "Tallenna joukkue"}
         </button>
@@ -289,6 +309,7 @@ export function TeamBuilder({ players }: TeamBuilderProps) {
                 type="button"
                 className={isSelected ? "builder-card selected" : "builder-card"}
                 onClick={() => togglePlayer(player.id)}
+                disabled={locked || isLoadingSavedTeam}
               >
                 <strong>{player.name}</strong>
                 <span>{player.club}</span>

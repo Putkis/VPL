@@ -14,4 +14,14 @@ describe("WeekViewPanel", () => {
 
     expect(screen.getByText("Top movers")).toBeInTheDocument();
   });
+
+  it("keeps the current-week selector ahead of the comparison week", async () => {
+    const user = userEvent.setup();
+    render(<WeekViewPanel />);
+
+    await user.selectOptions(screen.getByLabelText("Edellinen viikko"), "gw-2");
+
+    expect(screen.getByLabelText("Nykyinen viikko")).toHaveValue("gw-3");
+    expect(screen.queryByText("Valitse kaksi eri gameweekia vertailuun.")).not.toBeInTheDocument();
+  });
 });

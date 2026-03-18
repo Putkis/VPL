@@ -116,6 +116,18 @@ describe("POST /api/team", () => {
     });
   });
 
+  it("rejects unknown gameweeks on saved-team reads", async () => {
+    const response = await GET(createGetRequest("aino@example.com", "gw-99"));
+    const payload = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(payload).toEqual({
+      ok: false,
+      code: "unknown_gameweek",
+      message: "Valittua gameweekia ei loydy."
+    });
+  });
+
   it("updates an existing team and bumps the revision", async () => {
     await POST(
       createPostRequest({

@@ -69,4 +69,31 @@ describe("AdminResultsPanel", () => {
     expect(fetchMock).not.toHaveBeenCalledWith("/api/admin/results", expect.anything());
     expect(screen.getByText("JSON ei ole kelvollinen.")).toBeInTheDocument();
   });
+
+  it("disables both actions while a save is in flight", async () => {
+    let resolveSave: (() => void) | undefined;
+    fetchMock.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveSave = () =>
+            resolve({
+              ok: true,
+              json: async () => ({ ok: true, savedStatCount: 2 })
+            });
+        })
+    );
+
+    const user = userEvent.setup();
+    render(<AdminResultsPanel />);
+
+    await user.click(screen.getByRole("button", { name: "Tallenna tulokset" }));
+
+    expect(screen.getByRole("button", { name: "Tallennetaan..." })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Kaynnista pisteytys" })).toBeDisabled();
+
+    resolveSave?.();
+    await waitFor(() => {
+      expect(screen.getByText("Tulokset tallennettu. Riveja 2.")).toBeInTheDocument();
+    });
+  });
 });

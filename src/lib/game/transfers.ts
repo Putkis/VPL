@@ -28,6 +28,8 @@ export function quoteTransfer(options: {
   const currentPlayers = team.playerIds
     .map((playerId) => catalog.find((player) => player.id === playerId))
     .filter((player): player is NonNullable<typeof player> => Boolean(player));
+  const playerOut = currentPlayers.find((player) => player.id === options.playerOutId);
+  const playerIn = catalog.find((player) => player.id === options.playerInId);
 
   if (window.locked) {
     return {
@@ -37,9 +39,41 @@ export function quoteTransfer(options: {
     };
   }
 
+  if (options.playerOutId === options.playerInId) {
+    return {
+      ok: false,
+      code: "same_player_swap",
+      message: "Samaa pelaajaa ei voi vaihtaa ulos ja sisaan samalla siirrolla."
+    };
+  }
+
+  if (!playerOut) {
+    return {
+      ok: false,
+      code: "player_out_not_in_team",
+      message: "Valittu ulosmeneva pelaaja ei kuulu nykyiseen joukkueeseen."
+    };
+  }
+
+  if (!playerIn) {
+    return {
+      ok: false,
+      code: "unknown_player_in",
+      message: "Valittua sisaan tulevaa pelaajaa ei loydy."
+    };
+  }
+
+  if (currentPlayers.some((player) => player.id === playerIn.id)) {
+    return {
+      ok: false,
+      code: "player_already_owned",
+      message: "Valittu sisaan tuleva pelaaja on jo joukkueessa."
+    };
+  }
+
   const nextPlayers = currentPlayers
     .filter((player) => player.id !== options.playerOutId)
-    .concat(catalog.find((player) => player.id === options.playerInId) ?? []);
+    .concat(playerIn);
 
   const validation = validateTeamSelection(nextPlayers);
   if (!validation.ok) {
