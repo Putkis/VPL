@@ -14,7 +14,8 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
-    "score:run": "node scripts/score-job.mjs"
+    "score:run": "node scripts/score-job.mjs",
+    "db:seed:core": "node scripts/seed-core-data.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.8",
