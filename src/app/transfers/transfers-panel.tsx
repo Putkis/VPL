@@ -92,7 +92,7 @@ export function TransfersPanel() {
               Siirto onnistuu. Miinuspisteet: {quote.penaltyPoints}
             </p>
             <div className="player-grid">
-              {quote.players.map((player) => (
+              {(quote.players ?? []).map((player) => (
                 <article key={player.id} className="player-card">
                   <strong>{player.name}</strong>
                   <span>{player.position}</span>
