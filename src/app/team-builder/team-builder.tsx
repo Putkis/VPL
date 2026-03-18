@@ -2,7 +2,9 @@
 
 import React, { useState } from "react";
 import { CatalogPlayer } from "../../lib/game/catalog";
+import { seedGameweeks } from "../../lib/game/seed-data";
 import { TEAM_BUDGET_CENTS, TEAM_FORMATION_RULES, TEAM_SIZE, validateTeamSelection } from "../../lib/game/team-rules";
+import { isGameweekLocked } from "../../lib/game/gameweeks";
 
 type TeamBuilderProps = {
   players: CatalogPlayer[];
@@ -11,10 +13,12 @@ type TeamBuilderProps = {
 export function TeamBuilder({ players }: TeamBuilderProps) {
   const [teamName, setTeamName] = useState("Viikon nousijat");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [gameweekSlug, setGameweekSlug] = useState("gw-3");
   const [status, setStatus] = useState("Valitse kokoonpano ja tallenna backend-validaatiolla.");
 
   const selectedPlayers = players.filter((player) => selectedIds.includes(player.id));
   const validation = validateTeamSelection(selectedPlayers);
+  const locked = isGameweekLocked(gameweekSlug);
 
   async function saveTeam() {
     const response = await fetch("/api/team", {
@@ -24,7 +28,8 @@ export function TeamBuilder({ players }: TeamBuilderProps) {
       },
       body: JSON.stringify({
         teamName,
-        playerIds: selectedIds
+        playerIds: selectedIds,
+        gameweekSlug
       })
     });
 
@@ -66,6 +71,21 @@ export function TeamBuilder({ players }: TeamBuilderProps) {
           />
         </label>
 
+        <label>
+          Gameweek
+          <select
+            className="builder-input"
+            value={gameweekSlug}
+            onChange={(event) => setGameweekSlug(event.target.value)}
+          >
+            {seedGameweeks.map((gameweek) => (
+              <option key={gameweek.id} value={gameweek.slug}>
+                {gameweek.name}
+              </option>
+            ))}
+          </select>
+        </label>
+
         <div className="builder-summary">
           <div>
             <strong>{selectedPlayers.length}</strong>
@@ -86,11 +106,16 @@ export function TeamBuilder({ players }: TeamBuilderProps) {
           ))}
         </ul>
 
+        <p className={locked ? "status status-error" : "status status-success"}>
+          {locked
+            ? "Valittu gameweek on lukittu. API hylkaa tallennuksen deadline-ajan jalkeen."
+            : "Valittu gameweek on avoin muokkauksille."}
+        </p>
         <p className={validation.ok ? "status status-success" : "status status-error"} role="status">
           {validation.ok ? validation.message : validation.message}
         </p>
         <p className="status status-idle">{status}</p>
-        <button type="button" className="auth-submit" onClick={saveTeam}>
+        <button type="button" className="auth-submit" onClick={saveTeam} disabled={locked}>
           Tallenna joukkue
         </button>
       </div>

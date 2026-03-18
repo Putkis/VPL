@@ -33,7 +33,8 @@ describe("POST /api/team", () => {
     const response = await POST(
       createPostRequest({
         teamName: "Tasapaino",
-        playerIds: balancedIds
+        playerIds: balancedIds,
+        gameweekSlug: "gw-3"
       })
     );
 
@@ -47,7 +48,8 @@ describe("POST /api/team", () => {
     const response = await POST(
       createPostRequest({
         teamName: "Virhe",
-        playerIds: ["00000000-0000-4000-8000-999999999999"]
+        playerIds: ["00000000-0000-4000-8000-999999999999"],
+        gameweekSlug: "gw-3"
       })
     );
 
@@ -55,5 +57,24 @@ describe("POST /api/team", () => {
 
     expect(response.status).toBe(400);
     expect(payload).toEqual({ ok: false, code: "unknown_player" });
+  });
+
+  it("rejects team changes for locked gameweeks", async () => {
+    const response = await POST(
+      createPostRequest({
+        teamName: "Lukittu",
+        playerIds: balancedIds,
+        gameweekSlug: "gw-2"
+      })
+    );
+
+    const payload = await response.json();
+
+    expect(response.status).toBe(423);
+    expect(payload).toEqual({
+      ok: false,
+      code: "gameweek_locked",
+      message: "Gameweek on lukittu. Muutokset eivat ole enaa sallittuja."
+    });
   });
 });
