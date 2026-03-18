@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AuthPanel } from "../../src/app/auth/auth-panel";
 
 const {
+  getSupabaseClientMock,
   signUpMock,
   signInMock,
   signOutMock,
@@ -12,6 +13,7 @@ const {
   unsubscribeMock,
   onAuthStateChangeMock
 } = vi.hoisted(() => ({
+  getSupabaseClientMock: vi.fn(),
   signUpMock: vi.fn(),
   signInMock: vi.fn(),
   signOutMock: vi.fn(),
@@ -21,19 +23,12 @@ const {
 }));
 
 vi.mock("../../src/lib/supabase/client", () => ({
-  getSupabaseClient: () => ({
-    auth: {
-      signUp: signUpMock,
-      signInWithPassword: signInMock,
-      signOut: signOutMock,
-      getSession: getSessionMock,
-      onAuthStateChange: onAuthStateChangeMock
-    }
-  })
+  getSupabaseClient: getSupabaseClientMock
 }));
 
 describe("AuthPanel", () => {
   beforeEach(() => {
+    getSupabaseClientMock.mockReset();
     signUpMock.mockReset();
     signInMock.mockReset();
     signOutMock.mockReset();
@@ -49,6 +44,15 @@ describe("AuthPanel", () => {
         }
       }
     });
+    getSupabaseClientMock.mockImplementation(() => ({
+      auth: {
+        signUp: signUpMock,
+        signInWithPassword: signInMock,
+        signOut: signOutMock,
+        getSession: getSessionMock,
+        onAuthStateChange: onAuthStateChangeMock
+      }
+    }));
   });
 
   it("signs up with email and password", async () => {
@@ -127,5 +131,18 @@ describe("AuthPanel", () => {
     expect(screen.getByRole("status")).toHaveTextContent(
       "Salasanan on oltava vahintaan 8 merkkia."
     );
+  });
+
+  it("shows a local preview message instead of crashing when Supabase env vars are missing", async () => {
+    getSupabaseClientMock.mockImplementation(() => {
+      throw new Error("missing public env");
+    });
+
+    render(<AuthPanel />);
+
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Supabase-ymparistomuuttujat puuttuvat"
+    );
+    expect(screen.getByRole("button", { name: "Luo tili" })).toBeDisabled();
   });
 });
