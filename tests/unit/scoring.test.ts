@@ -1,14 +1,19 @@
 // @vitest-environment node
 
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import {
   buildOverallTable,
   buildPlayerScoreBreakdown,
   buildTeamGameweekScores,
   calculatePlayerScore
 } from "../../src/lib/game/scoring";
+import { clearResultsStoreForTests } from "../../src/lib/game/results-store";
 
 describe("scoring engine", () => {
+  beforeEach(() => {
+    clearResultsStoreForTests();
+  });
+
   it("calculates defender clean sheet and goal points deterministically", () => {
     expect(
       calculatePlayerScore("defender", {
