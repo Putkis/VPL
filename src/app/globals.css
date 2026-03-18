@@ -154,6 +154,83 @@ h1 {
   color: #223447;
 }
 
+.auth-shell {
+  width: min(980px, 100% - 2rem);
+  margin: 3rem auto;
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+  align-items: start;
+}
+
+.auth-copy,
+.auth-card {
+  background: #ffffff;
+  border: 1px solid #dbe4f0;
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 10px 25px -20px rgba(25, 45, 84, 0.45);
+}
+
+.auth-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.auth-tab,
+.auth-submit {
+  border: 0;
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.auth-tab {
+  background: #edf2fb;
+  color: #173050;
+}
+
+.auth-tab.active,
+.auth-submit {
+  background: #0f766e;
+  color: #ffffff;
+}
+
+.auth-form {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.auth-form input {
+  width: 100%;
+  padding: 0.8rem 0.9rem;
+  border-radius: 10px;
+  border: 1px solid #b5c6db;
+  font: inherit;
+}
+
+.auth-form input:focus {
+  outline: 2px solid #0f766e;
+  outline-offset: 1px;
+}
+
+.auth-session {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.auth-session-label {
+  margin: 0;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #49627f;
+}
+
 @media (max-width: 700px) {
   .landing {
     margin: 1rem auto 2rem;
@@ -172,5 +249,11 @@ h1 {
 
   .input-row button {
     width: 100%;
+  }
+
+  .auth-shell {
+    width: min(980px, 100% - 1rem);
+    margin: 1rem auto 2rem;
+    grid-template-columns: 1fr;
   }
 }
