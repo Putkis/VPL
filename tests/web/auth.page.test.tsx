@@ -21,7 +21,7 @@ const {
 }));
 
 vi.mock("../../src/lib/supabase/client", () => ({
-  supabase: {
+  getSupabaseClient: () => ({
     auth: {
       signUp: signUpMock,
       signInWithPassword: signInMock,
@@ -29,7 +29,7 @@ vi.mock("../../src/lib/supabase/client", () => ({
       getSession: getSessionMock,
       onAuthStateChange: onAuthStateChangeMock
     }
-  }
+  })
 }));
 
 describe("AuthPanel", () => {
