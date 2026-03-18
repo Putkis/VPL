@@ -2,6 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { readServerEnv } from "../../../lib/env.server";
+import { captureServerError } from "../../../lib/observability.server";
 
 const featureInterestOptions = [
   "live_scores",
@@ -67,7 +68,17 @@ export async function POST(request: Request) {
   try {
     await saveSignup(parsedPayload.data);
     return NextResponse.json({ ok: true }, { status: 201 });
-  } catch {
+  } catch (error) {
+    await captureServerError(error, {
+      source: "waitlist.signup",
+      route: "/api/waitlist",
+      severity: "critical",
+      metadata: {
+        email: parsedPayload.data.email,
+        topFeatureInterest: parsedPayload.data.topFeatureInterest
+      }
+    });
+
     return NextResponse.json(
       { ok: false, code: "server_error" },
       { status: 500 }
