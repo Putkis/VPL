@@ -15,6 +15,16 @@ function createPostRequest(body: unknown) {
   });
 }
 
+function createRawPostRequest(body: string) {
+  return new Request("http://localhost/api/team", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body
+  });
+}
+
 function createGetRequest(viewerKey: string, gameweek = "gw-3") {
   return new Request(
     `http://localhost/api/team?viewerKey=${encodeURIComponent(viewerKey)}&gameweek=${encodeURIComponent(gameweek)}`
@@ -56,6 +66,26 @@ describe("POST /api/team", () => {
     expect(payload.ok).toBe(true);
   });
 
+  it("rejects malformed JSON payloads", async () => {
+    const response = await POST(createRawPostRequest("{"));
+    const payload = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(payload).toEqual({ ok: false, code: "invalid_payload" });
+  });
+
+  it("rejects incomplete team payloads", async () => {
+    const response = await POST(
+      createPostRequest({
+        viewerKey: "aino@example.com"
+      })
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(payload).toEqual({ ok: false, code: "invalid_team" });
+  });
+
   it("rejects a team with unknown player ids", async () => {
     const response = await POST(
       createPostRequest({
@@ -70,6 +100,25 @@ describe("POST /api/team", () => {
 
     expect(response.status).toBe(400);
     expect(payload).toEqual({ ok: false, code: "unknown_player" });
+  });
+
+  it("rejects unknown gameweeks", async () => {
+    const response = await POST(
+      createPostRequest({
+        viewerKey: "aino@example.com",
+        teamName: "Tuntematon",
+        playerIds: balancedIds,
+        gameweekSlug: "gw-99"
+      })
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(payload).toEqual({
+      ok: false,
+      code: "unknown_gameweek",
+      message: "Valittua gameweekia ei loydy."
+    });
   });
 
   it("rejects team changes for locked gameweeks", async () => {
@@ -114,6 +163,14 @@ describe("POST /api/team", () => {
       playerIds: balancedIds,
       revision: 1
     });
+  });
+
+  it("rejects saved-team reads without a viewer key", async () => {
+    const response = await GET(new Request("http://localhost/api/team?gameweek=gw-3"));
+    const payload = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(payload).toEqual({ ok: false, code: "invalid_viewer" });
   });
 
   it("updates an existing team and bumps the revision", async () => {
