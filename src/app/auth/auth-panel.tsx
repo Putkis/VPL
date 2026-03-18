@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
-import { supabase } from "../../lib/supabase/client";
+import { getSupabaseClient } from "../../lib/supabase/client";
 
 type AuthMode = "sign-in" | "sign-up";
 type AuthStatus = "idle" | "submitting" | "success" | "error";
@@ -23,6 +23,7 @@ export function AuthPanel() {
 
   useEffect(() => {
     let isMounted = true;
+    const supabase = getSupabaseClient();
 
     void supabase.auth.getSession().then(({ data }) => {
       if (isMounted) {
@@ -44,6 +45,7 @@ export function AuthPanel() {
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const supabase = getSupabaseClient();
 
     if (password.trim().length < 8) {
       setStatus("error");
@@ -76,6 +78,7 @@ export function AuthPanel() {
   }
 
   async function handleSignOut() {
+    const supabase = getSupabaseClient();
     setStatus("submitting");
     const { error } = await supabase.auth.signOut();
 
