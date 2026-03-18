@@ -16,14 +16,36 @@ export function AuthPanel() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [session, setSession] = useState<Session | null>(null);
+  const [isConfigured, setIsConfigured] = useState(true);
   const [status, setStatus] = useState<AuthStatus>("idle");
   const [message, setMessage] = useState(
     "Supabase Auth hoitaa salasanan hashauksen ja session sailytyksen."
   );
 
+  function resolveSupabaseClient() {
+    try {
+      const supabase = getSupabaseClient();
+      setIsConfigured(true);
+      return supabase;
+    } catch {
+      setIsConfigured(false);
+      setStatus("error");
+      setMessage(
+        "Supabase-ymparistomuuttujat puuttuvat. Lisaa NEXT_PUBLIC_SUPABASE_URL ja NEXT_PUBLIC_SUPABASE_ANON_KEY testataksesi kirjautumista."
+      );
+      return null;
+    }
+  }
+
   useEffect(() => {
     let isMounted = true;
-    const supabase = getSupabaseClient();
+    const supabase = resolveSupabaseClient();
+
+    if (!supabase) {
+      return () => {
+        isMounted = false;
+      };
+    }
 
     void supabase.auth.getSession().then(({ data }) => {
       if (isMounted) {
@@ -45,7 +67,11 @@ export function AuthPanel() {
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const supabase = getSupabaseClient();
+    const supabase = resolveSupabaseClient();
+
+    if (!supabase) {
+      return;
+    }
 
     if (password.trim().length < 8) {
       setStatus("error");
@@ -78,7 +104,12 @@ export function AuthPanel() {
   }
 
   async function handleSignOut() {
-    const supabase = getSupabaseClient();
+    const supabase = resolveSupabaseClient();
+
+    if (!supabase) {
+      return;
+    }
+
     setStatus("submitting");
     const { error } = await supabase.auth.signOut();
 
@@ -167,7 +198,11 @@ export function AuthPanel() {
               required
             />
 
-            <button type="submit" className="auth-submit" disabled={status === "submitting"}>
+            <button
+              type="submit"
+              className="auth-submit"
+              disabled={status === "submitting" || !isConfigured}
+            >
               {status === "submitting"
                 ? "Kasitellaan..."
                 : mode === "sign-up"
