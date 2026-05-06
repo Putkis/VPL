@@ -5,7 +5,8 @@ import { validateTeamSelection } from "../../../lib/game/team-rules";
 
 const teamSchema = z.object({
   teamName: z.string().trim().min(3).max(30),
-  playerIds: z.array(z.string().uuid()).min(1)
+  playerIds: z.array(z.string().uuid()).min(1),
+  gameweekSlug: z.string().trim().min(1).default("gw-3")
 });
 
 export async function POST(request: Request) {
@@ -19,6 +20,18 @@ export async function POST(request: Request) {
   const parsed = teamSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ ok: false, code: "invalid_team" }, { status: 400 });
+  }
+
+  const { isGameweekLocked } = await import("../../../lib/game/gameweeks");
+  if (isGameweekLocked(parsed.data.gameweekSlug)) {
+    return NextResponse.json(
+      {
+        ok: false,
+        code: "gameweek_locked",
+        message: "Gameweek on lukittu. Muutokset eivat ole enaa sallittuja."
+      },
+      { status: 423 }
+    );
   }
 
   const catalog = getPlayerCatalog();
@@ -48,7 +61,8 @@ export async function POST(request: Request) {
     ok: true,
     team: {
       name: parsed.data.teamName,
-      players: selectedPlayers
+      players: selectedPlayers,
+      gameweekSlug: parsed.data.gameweekSlug
     },
     validation
   });
