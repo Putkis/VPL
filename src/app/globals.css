@@ -231,6 +231,85 @@ h1 {
   color: #49627f;
 }
 
+.app-shell {
+  width: min(1100px, 100% - 2rem);
+  margin: 3rem auto;
+  display: grid;
+  gap: 1.5rem;
+}
+
+.panel {
+  background: #ffffff;
+  border: 1px solid #dbe4f0;
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 10px 25px -20px rgba(25, 45, 84, 0.45);
+}
+
+.panel-caption {
+  margin: 0 0 1rem;
+  color: #49627f;
+  font-weight: 600;
+}
+
+.filters-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+}
+
+.filters-grid label {
+  display: grid;
+  gap: 0.35rem;
+  font-weight: 600;
+}
+
+.filters-grid input,
+.filters-grid select {
+  width: 100%;
+  padding: 0.8rem 0.9rem;
+  border-radius: 10px;
+  border: 1px solid #b5c6db;
+  font: inherit;
+}
+
+.player-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.player-card {
+  border: 1px solid #dbe4f0;
+  border-radius: 14px;
+  padding: 1rem;
+  background: linear-gradient(180deg, #ffffff 0%, #f4f8fd 100%);
+}
+
+.player-card-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.player-stats {
+  margin: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.player-stats div {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.player-stats dt,
+.player-stats dd {
+  margin: 0;
+}
+
 @media (max-width: 700px) {
   .landing {
     margin: 1rem auto 2rem;
@@ -255,5 +334,10 @@ h1 {
     width: min(980px, 100% - 1rem);
     margin: 1rem auto 2rem;
     grid-template-columns: 1fr;
+  }
+
+  .app-shell {
+    width: min(1100px, 100% - 1rem);
+    margin: 1rem auto 2rem;
   }
 }
