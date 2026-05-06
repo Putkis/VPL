@@ -310,6 +310,48 @@ h1 {
   margin: 0;
 }
 
+.builder-input {
+  width: 100%;
+  margin-top: 0.35rem;
+  padding: 0.8rem 0.9rem;
+  border-radius: 10px;
+  border: 1px solid #b5c6db;
+  font: inherit;
+}
+
+.builder-summary {
+  margin: 1rem 0;
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.rule-list {
+  margin: 0 0 1rem;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.builder-card {
+  display: grid;
+  gap: 0.35rem;
+  width: 100%;
+  text-align: left;
+  border: 1px solid #dbe4f0;
+  border-radius: 14px;
+  padding: 1rem;
+  background: #ffffff;
+  cursor: pointer;
+  font: inherit;
+}
+
+.builder-card.selected {
+  border-color: #0f766e;
+  box-shadow: inset 0 0 0 1px #0f766e;
+  background: #effcf7;
+}
+
 @media (max-width: 700px) {
   .landing {
     margin: 1rem auto 2rem;
