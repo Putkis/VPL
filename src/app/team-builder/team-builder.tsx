@@ -87,7 +87,7 @@ export function TeamBuilder({ players }: TeamBuilderProps) {
         </ul>
 
         <p className={validation.ok ? "status status-success" : "status status-error"} role="status">
-          {validation.ok ? validation.message : validation.message}
+          {validation.message}
         </p>
         <p className="status status-idle">{status}</p>
         <button type="button" className="auth-submit" onClick={saveTeam}>
