@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import React, { useEffect, useMemo, useState } from "react";
-import { demoViewerKey, getViewerKey, setViewerEmail } from "../../lib/game/viewer-identity";
 import { onboardingPresets, onboardingSteps, OnboardingStepId } from "../../lib/game/onboarding";
+import { getSupabaseClient } from "../../lib/supabase/client";
 
 type SaveResponse = {
   ok: boolean;
@@ -13,24 +13,69 @@ type SaveResponse = {
 const gameweekSlug = "gw-3";
 
 export function OnboardingFlow() {
-  const [viewerKey, setViewerKey] = useState(demoViewerKey);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [viewerEmail, setViewerEmail] = useState<string | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [authAvailable, setAuthAvailable] = useState(true);
+  const [authLoadError, setAuthLoadError] = useState<string | null>(null);
   const [activeStep, setActiveStep] = useState<OnboardingStepId>("identity");
   const [selectedPresetId, setSelectedPresetId] = useState(onboardingPresets[0]?.id ?? "balanced");
   const [teamName, setTeamName] = useState(onboardingPresets[0]?.teamName ?? "Nopea nousu");
   const [status, setStatus] = useState(
-    "Valitse nopea aloitustapa. Demotili toimii ilman erillista kirjautumista."
+    "Kirjaudu sisään, niin tallennettu joukkue liitetään omaan tiliisi."
   );
   const [isSaving, setIsSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
 
   useEffect(() => {
-    setViewerKey(getViewerKey());
+    let isMounted = true;
+    let supabase: ReturnType<typeof getSupabaseClient>;
+
+    try {
+      supabase = getSupabaseClient();
+    } catch {
+      setAuthAvailable(false);
+      setAuthLoading(false);
+      setStatus("Kirjautuminen ei ole saatavilla. Tarkista Supabase-ympäristöasetukset.");
+      return;
+    }
+
+    const {
+      data: { subscription }
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!isMounted) return;
+      setAccessToken(session?.access_token ?? null);
+      setViewerEmail(session?.user.email ?? null);
+      setAuthLoadError(null);
+      setAuthLoading(false);
+    });
+
+    supabase.auth.getSession().then(({ data, error }) => {
+      if (!isMounted) return;
+      if (error) {
+        setAuthLoadError("Kirjautumistietojen lataus epäonnistui. Yritä ladata sivu uudelleen.");
+      } else {
+        setAuthLoadError(null);
+      }
+      setAccessToken(data.session?.access_token ?? null);
+      setViewerEmail(data.session?.user.email ?? null);
+      setAuthLoading(false);
+    }).catch(() => {
+      if (!isMounted) return;
+      setAuthLoadError("Kirjautumistietojen lataus epäonnistui. Yritä ladata sivu uudelleen.");
+      setAuthLoading(false);
+    });
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const activeStepIndex = onboardingSteps.findIndex((step) => step.id === activeStep);
   const selectedPreset =
     onboardingPresets.find((preset) => preset.id === selectedPresetId) ?? onboardingPresets[0];
-  const canAdvanceFromIdentity = viewerKey.trim().length >= 3;
+  const canAdvanceFromIdentity = !authLoading && Boolean(accessToken && viewerEmail);
   const progressValue = ((activeStepIndex + 1) / onboardingSteps.length) * 100;
   const progressLabel = `${activeStepIndex + 1} / ${onboardingSteps.length}`;
   const starterPlayerNames = useMemo(
@@ -46,7 +91,6 @@ export function OnboardingFlow() {
 
   function goToNextStep() {
     if (activeStep === "identity") {
-      setViewerEmail(viewerKey);
       setActiveStep("starter");
       setStatus("Valitse valmis aloituskokoonpano. Voit hienosaattaa sita myohemmin team builderissa.");
       return;
@@ -70,45 +114,43 @@ export function OnboardingFlow() {
   }
 
   async function saveStarterTeam() {
-    if (!selectedPreset) {
+    if (!selectedPreset || !accessToken) {
+      setStatus("Kirjaudu sisään ennen aloitusjoukkueen tallentamista.");
       return;
     }
 
     setIsSaving(true);
     setStatus("Tallennetaan aloitusjoukkuetta...");
 
-    const response = await fetch("/api/team", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        viewerKey,
-        teamName,
-        playerIds: selectedPreset.playerIds,
-        gameweekSlug
-      })
-    }).catch(() => null);
+    try {
+      const response = await fetch("/api/team", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`
+        },
+        body: JSON.stringify({
+          teamName,
+          playerIds: selectedPreset.playerIds,
+          gameweekSlug
+        })
+      });
 
-    if (!response) {
-      setIsSaving(false);
+      const payload = (await response.json().catch(() => null)) as SaveResponse | null;
+      if (!response.ok || !payload?.ok) {
+        setIsSaved(false);
+        setStatus(payload?.message ?? "Tallennus epäonnistui. Voit yrittää uudelleen.");
+        return;
+      }
+
+      setIsSaved(true);
+      setStatus("Aloitusjoukkue tallennettu. Voit jatkaa suoraan team builderiin tai leaderboardiin.");
+    } catch {
       setIsSaved(false);
-      setStatus("Tallennus epaonnistui verkko-ongelman vuoksi. Voit yrittää heti uudelleen.");
-      return;
-    }
-
-    const payload = (await response.json()) as SaveResponse;
-    if (!response.ok) {
+      setStatus("Tallennus epäonnistui verkkovirheen vuoksi. Voit yrittää uudelleen.");
+    } finally {
       setIsSaving(false);
-      setIsSaved(false);
-      setStatus(payload.message ?? "Tallennus epaonnistui. Palaa tarvittaessa edelliseen vaiheeseen.");
-      return;
     }
-
-    setViewerEmail(viewerKey);
-    setIsSaving(false);
-    setIsSaved(true);
-    setStatus("Aloitusjoukkue tallennettu. Voit jatkaa suoraan team builderiin tai leaderboardiin.");
   }
 
   return (
@@ -119,8 +161,8 @@ export function OnboardingFlow() {
           <div>
             <h1>Luo ensimmainen joukkue alle viidessa minuutissa</h1>
             <p className="lead">
-              Onboarding ohittaa turhat valinnat: kayta demokayttajaa, valitse valmis runko ja
-              tallenna. Hienosaato tapahtuu vasta sen jalkeen.
+              Valitse valmis runko ja tallenna se omalle tilillesi. Hienosaato tapahtuu vasta
+              ensimmaisen joukkueen jalkeen.
             </p>
           </div>
           <div className="progress-card" aria-label="Onboarding progress">
@@ -153,17 +195,22 @@ export function OnboardingFlow() {
 
       {activeStep === "identity" ? (
         <div className="panel">
-          <p className="panel-caption">Vaihe 1 / Kayttaja</p>
-          <div className="filters-grid">
-            <label>
-              Demo tai oma sahkoposti
-              <input value={viewerKey} onChange={(event) => setViewerKey(event.target.value)} />
-            </label>
-          </div>
-          <p className="status status-idle">
-            Oletus: <strong>{demoViewerKey}</strong>. Kirjautuminen ei ole pakollinen onboardingin
-            ensivaiheessa.
-          </p>
+          <p className="panel-caption">Vaihe 1 / Käyttäjä</p>
+          {authLoading ? <p className="status status-submitting">Tarkistetaan kirjautumista…</p> : null}
+          {authAvailable && viewerEmail ? (
+            <p className="status status-success">Kirjautunut käyttäjä: <strong>{viewerEmail}</strong></p>
+          ) : null}
+          {!authLoading && !viewerEmail ? (
+            <div>
+              <p className="status status-error">
+                {authLoadError ??
+                  (authAvailable ? "Kirjaudu sisään ennen joukkueen tallentamista." : status)}
+              </p>
+              {authAvailable && !authLoadError ? (
+                <Link href="/auth" className="topbar-link">Kirjaudu sisään</Link>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       ) : null}
 
@@ -198,7 +245,7 @@ export function OnboardingFlow() {
           </label>
           <div className="builder-summary">
             <div>
-              <strong>{viewerKey}</strong>
+              <strong>{viewerEmail}</strong>
               <span> kayttaja</span>
             </div>
             <div>
