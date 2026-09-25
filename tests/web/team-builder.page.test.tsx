@@ -165,7 +165,6 @@ describe("TeamBuilder", () => {
     const nameInput = screen.getByLabelText("Joukkueen nimi");
     await user.clear(nameInput);
     await user.type(nameInput, "Muutettu nimi");
-    await user.click(screen.getByRole("button", { name: /Samu Virtanen/i }));
     await user.click(screen.getByRole("button", { name: "Paivita joukkue" }));
 
     await waitFor(() => {

@@ -1,6 +1,12 @@
+import { validateGameweekRange } from "./gameweeks";
 import { buildPlayerScoreBreakdown, buildTeamGameweekScores } from "./scoring";
 
 export function buildWeekChanges(fromGameweekSlug: string, toGameweekSlug: string) {
+  const range = validateGameweekRange(fromGameweekSlug, toGameweekSlug);
+  if (!range.ok) {
+    return range;
+  }
+
   const previousTable = new Map(
     buildTeamGameweekScores(fromGameweekSlug).map((entry) => [entry.teamId, entry])
   );
@@ -37,7 +43,8 @@ export function buildWeekChanges(fromGameweekSlug: string, toGameweekSlug: strin
     .sort((left, right) => right.scoreDelta - left.scoreDelta);
 
   return {
+    ok: true,
     teamChanges,
     playerMovers
-  };
+  } as const;
 }

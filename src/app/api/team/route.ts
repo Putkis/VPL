@@ -124,6 +124,9 @@ export async function GET(request: Request) {
   if (!auth) return NextResponse.json({ ok: false, code: "unauthorized" }, { status: 401 });
   const url = new URL(request.url);
   const gameweekSlug = url.searchParams.get("gameweek")?.trim() ?? "gw-3";
+  if (!getGameweekBySlug(gameweekSlug)) {
+    return buildUnknownGameweekResponse();
+  }
   let team: Awaited<ReturnType<typeof getStoredTeam>>;
   try {
     team = await getStoredTeam(auth.userId, gameweekSlug, auth.accessToken);
