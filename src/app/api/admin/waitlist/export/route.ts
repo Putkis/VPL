@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import { readServerEnv } from "../../../../../lib/env.server";
+import { captureServerError } from "../../../../../lib/observability.server";
 
 function createWaitlistClient() {
   const env = readServerEnv();
@@ -45,6 +46,12 @@ export async function GET(request: Request) {
     .order("created_at", { ascending: true });
 
   if (error) {
+    await captureServerError(error, {
+      source: "admin.waitlist-export",
+      route: "/api/admin/waitlist/export",
+      severity: "critical"
+    });
+
     return NextResponse.json(
       { ok: false, code: "server_error" },
       { status: 500 }
