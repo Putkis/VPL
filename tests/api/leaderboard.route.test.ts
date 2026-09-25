@@ -15,4 +15,15 @@ describe("GET /api/leaderboard", () => {
     expect(payload.rows.length).toBeGreaterThan(0);
     expect(payload.summary.viewerTeamName).toBe("Viherio CF");
   });
+
+  it("falls back to global for an unknown scope", async () => {
+    const response = await GET(
+      new Request("http://localhost/api/leaderboard?scope=unknown")
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.scope).toBe("global");
+    expect(payload.rows).toHaveLength(3);
+  });
 });
