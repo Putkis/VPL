@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { CatalogPlayer } from "../../lib/game/catalog";
-import { getViewerKey } from "../../lib/game/viewer-identity";
+import { getSupabaseClient } from "../../lib/supabase/client";
 import { seedGameweeks } from "../../lib/game/seed-data";
 import { TEAM_BUDGET_CENTS, TEAM_FORMATION_RULES, TEAM_SIZE, validateTeamSelection } from "../../lib/game/team-rules";
 import { isGameweekLocked } from "../../lib/game/gameweeks";
@@ -17,7 +17,6 @@ type PersistedTeamResponse = {
     name: string;
     playerIds: string[];
     gameweekSlug: string;
-    viewerKey: string;
     revision: number;
     updatedAt: string;
   } | null;
@@ -40,7 +39,8 @@ export function TeamBuilder({ players }: TeamBuilderProps) {
   const [teamName, setTeamName] = useState("Viikon nousijat");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [gameweekSlug, setGameweekSlug] = useState("gw-3");
-  const [viewerKey, setViewerKey] = useState("demo@local.vpl");
+  const [viewerEmail, setViewerEmail] = useState("");
+  const [accessToken, setAccessToken] = useState("");
   const [loadStatus, setLoadStatus] = useState("Ladataan mahdollinen tallennettu joukkue...");
   const [isLoadingSavedTeam, setIsLoadingSavedTeam] = useState(true);
   const [isPersisted, setIsPersisted] = useState(false);
@@ -54,7 +54,21 @@ export function TeamBuilder({ players }: TeamBuilderProps) {
   const [status, setStatus] = useState("Valitse kokoonpano ja tallenna backend-validaatiolla.");
 
   useEffect(() => {
-    setViewerKey(getViewerKey());
+    let isMounted = true;
+    try {
+      void getSupabaseClient().auth.getSession().then(({ data }) => {
+        if (isMounted && data.session) {
+          setViewerEmail(data.session.user.email ?? "");
+          setAccessToken(data.session.access_token);
+        }
+      }).catch(() => {
+        if (isMounted) setLoadStatus("Kirjaudu sisään ladataksesi tallennetun joukkueen.");
+      });
+    } catch {
+      setLoadStatus("Kirjaudu sisään Supabase-tilillä tallentaaksesi joukkueen.");
+      setIsLoadingSavedTeam(false);
+    }
+    return () => { isMounted = false; };
   }, []);
 
   const selectedPlayers = players.filter((player) => selectedIds.includes(player.id));
@@ -65,11 +79,17 @@ export function TeamBuilder({ players }: TeamBuilderProps) {
     let isMounted = true;
 
     async function loadSavedTeam() {
+      if (!accessToken) {
+        setIsLoadingSavedTeam(false);
+        setLoadStatus("Kirjaudu sisään ladataksesi tallennetun joukkueen.");
+        return;
+      }
       setIsLoadingSavedTeam(true);
 
       try {
         const response = await fetch(
-          `/api/team?viewerKey=${encodeURIComponent(viewerKey)}&gameweek=${encodeURIComponent(gameweekSlug)}`
+          `/api/team?gameweek=${encodeURIComponent(gameweekSlug)}`,
+          { headers: { Authorization: `Bearer ${accessToken}` } }
         );
         const payload = (await response.json()) as PersistedTeamResponse;
 
@@ -120,10 +140,14 @@ export function TeamBuilder({ players }: TeamBuilderProps) {
     return () => {
       isMounted = false;
     };
-  }, [gameweekSlug, viewerKey]);
+  }, [gameweekSlug, accessToken]);
 
   async function saveTeam() {
     const previousSnapshot = lastSavedSnapshot;
+    if (!accessToken) {
+      setStatus("Kirjaudu sisään ennen joukkueen tallentamista.");
+      return;
+    }
     setStatus(
       isPersisted
         ? "Paivitetaan joukkuetta optimistic UI:lla. Virhetilassa palautetaan viimeisin tallennettu versio."
@@ -134,10 +158,10 @@ export function TeamBuilder({ players }: TeamBuilderProps) {
       const response = await fetch("/api/team", {
         method: isPersisted ? "PUT" : "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`
         },
         body: JSON.stringify({
-          viewerKey,
           teamName,
           playerIds: selectedIds,
           gameweekSlug
@@ -233,8 +257,8 @@ export function TeamBuilder({ players }: TeamBuilderProps) {
 
         <div className="builder-summary">
           <div>
-            <strong>{viewerKey}</strong>
-            <span> aktiivinen demo/kayttaja</span>
+            <strong>{viewerEmail || "Ei kirjautunut"}</strong>
+            <span>{viewerEmail ? " kirjautunut käyttäjä" : " aktiivinen käyttäjä"}</span>
           </div>
           <div>
             <strong>{selectedPlayers.length}</strong>
