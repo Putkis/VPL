@@ -1,9 +1,8 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { getAdminEmails } from "../../../lib/game/admin";
-import { getViewerKey } from "../../../lib/game/viewer-identity";
 import { seedGameweeks } from "../../../lib/game/seed-data";
+import { getSupabaseClient } from "../../../lib/supabase/client";
 
 type AdminStatLine = {
   playerId: string;
@@ -84,14 +83,20 @@ function getSeededJsonExample(gameweekSlug: string) {
 }
 
 export function AdminResultsPanel() {
-  const [viewerKey, setViewerKey] = useState("demo@local.vpl");
+  const [viewerEmail, setViewerEmail] = useState("");
   const [gameweekSlug, setGameweekSlug] = useState("gw-2");
   const [statsJson, setStatsJson] = useState(getSeededJsonExample("gw-2"));
   const [status, setStatus] = useState("Lataa JSON-esimerkki, muokkaa tarvittaessa ja tallenna.");
   const [scoreSummary, setScoreSummary] = useState<ScoreRunPayload | null>(null);
 
   useEffect(() => {
-    setViewerKey(getViewerKey());
+    try {
+      void getSupabaseClient().auth.getSession().then(({ data }) => {
+        setViewerEmail(data.session?.user.email ?? "");
+      }).catch(() => setStatus("Kirjaudu sisään admin-tilillä."));
+    } catch {
+      setStatus("Kirjaudu sisään admin-tilillä.");
+    }
   }, []);
 
   useEffect(() => {
@@ -99,15 +104,27 @@ export function AdminResultsPanel() {
   }, [gameweekSlug]);
 
   async function saveResults() {
+    let stats: AdminStatLine[];
     try {
-      const stats = JSON.parse(statsJson) as AdminStatLine[];
+      stats = JSON.parse(statsJson) as AdminStatLine[];
+    } catch {
+      setStatus("JSON ei ole kelvollinen.");
+      return;
+    }
+
+    try {
+      const session = (await getSupabaseClient().auth.getSession()).data.session;
+      if (!session) {
+        setStatus("Kirjaudu sisään admin-tilillä.");
+        return;
+      }
       const response = await fetch("/api/admin/results", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`
         },
         body: JSON.stringify({
-          viewerKey,
           gameweekSlug,
           stats
         })
@@ -125,21 +142,28 @@ export function AdminResultsPanel() {
 
       setStatus(`Tulokset tallennettu. Riveja ${payload.savedStatCount ?? 0}.`);
     } catch {
-      setStatus("JSON ei ole kelvollinen.");
+      setStatus("Tulosten tallennus epäonnistui. Tarkista kirjautuminen ja yhteys.");
     }
   }
 
   async function runScoring() {
-    const response = await fetch("/api/admin/results/score", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        viewerKey,
-        gameweekSlug
-      })
-    });
+    let response: Response;
+    try {
+      const session = (await getSupabaseClient().auth.getSession()).data.session;
+      if (!session) throw new Error("Kirjaudu sisään admin-tilillä.");
+      response = await fetch("/api/admin/results/score", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ gameweekSlug })
+      });
+    } catch {
+      setStatus("Kirjaudu sisään admin-tilillä tai tarkista yhteys.");
+      setScoreSummary(null);
+      return;
+    }
 
     const payload = (await response.json()) as ScoreRunPayload;
     if (!response.ok) {
@@ -158,15 +182,11 @@ export function AdminResultsPanel() {
         <p className="eyebrow">Admin</p>
         <h1>Tulosten syotto + pisteytyksen ajo</h1>
         <p className="lead">
-          Demo-admin voi tallentaa gameweekin stat-rivit JSON:na ja kaynnistaa pisteytyksen
-          saman nakyman kautta. Oletus-adminit: {getAdminEmails().join(", ")}.
+          Kirjautunut käyttäjä: {viewerEmail || "ei kirjautunut"}. Vain ADMIN_EMAILS-asetuksessa
+          määritellyt adminit voivat tallentaa tuloksia ja käynnistää pisteytyksen.
         </p>
 
         <div className="filters-grid">
-          <label>
-            Viewer / admin email
-            <input value={viewerKey} onChange={(event) => setViewerKey(event.target.value)} />
-          </label>
           <label>
             Gameweek
             <select value={gameweekSlug} onChange={(event) => setGameweekSlug(event.target.value)}>
@@ -198,7 +218,7 @@ export function AdminResultsPanel() {
           </button>
         </div>
 
-        <p className="status status-idle">{status}</p>
+        <p className="status status-idle" role="status">{status}</p>
       </div>
 
       {scoreSummary ? (

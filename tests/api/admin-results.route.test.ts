@@ -1,16 +1,26 @@
 // @vitest-environment node
 
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { GET as getScoringPreview } from "../../src/app/api/scoring/preview/route";
+import { GET as getAdminResults } from "../../src/app/api/admin/results/route";
 import { POST as postAdminResults } from "../../src/app/api/admin/results/route";
 import { POST as runAdminScore } from "../../src/app/api/admin/results/score/route";
 import { clearResultsStoreForTests } from "../../src/lib/game/results-store";
+
+const { getAuthenticatedAdminEmailMock } = vi.hoisted(() => ({
+  getAuthenticatedAdminEmailMock: vi.fn(async (): Promise<string | null> => "aino@example.com")
+}));
+
+vi.mock("../../src/lib/game/admin", () => ({
+  getAuthenticatedAdminEmail: getAuthenticatedAdminEmailMock
+}));
 
 function createJsonRequest(url: string, body: unknown) {
   return new Request(url, {
     method: "POST",
     headers: {
-      "Content-Type": "application/json"
+      "Content-Type": "application/json",
+      Authorization: "Bearer valid-admin-token"
     },
     body: JSON.stringify(body)
   });
@@ -19,12 +29,12 @@ function createJsonRequest(url: string, body: unknown) {
 describe("admin results routes", () => {
   beforeEach(() => {
     clearResultsStoreForTests();
+    getAuthenticatedAdminEmailMock.mockResolvedValue("aino@example.com");
   });
 
   it("allows an admin to save validated result rows", async () => {
     const response = await postAdminResults(
       createJsonRequest("http://localhost/api/admin/results", {
-        viewerKey: "aino@example.com",
         gameweekSlug: "gw-3",
         stats: [
           {
@@ -52,9 +62,10 @@ describe("admin results routes", () => {
   });
 
   it("rejects non-admin submissions", async () => {
+    getAuthenticatedAdminEmailMock.mockResolvedValueOnce(null);
     const response = await postAdminResults(
       createJsonRequest("http://localhost/api/admin/results", {
-        viewerKey: "viewer@example.com",
+        viewerKey: "aino@example.com",
         gameweekSlug: "gw-3",
         stats: [
           {
@@ -75,12 +86,30 @@ describe("admin results routes", () => {
 
     expect(response.status).toBe(403);
     expect(payload.code).toBe("forbidden");
+    expect(payload.admins).toBeUndefined();
+  });
+
+  it("requires an admin session to read results", async () => {
+    getAuthenticatedAdminEmailMock.mockResolvedValueOnce(null);
+    const response = await getAdminResults(new Request("http://localhost/api/admin/results?gameweek=gw-2", {
+      headers: { Authorization: "Bearer invalid-token" }
+    }));
+    expect(response.status).toBe(403);
+    expect((await response.json()).admins).toBeUndefined();
+  });
+
+  it("rejects invalid stat data for authenticated admins", async () => {
+    const response = await postAdminResults(createJsonRequest("http://localhost/api/admin/results", {
+      gameweekSlug: "gw-3",
+      stats: [{ playerId: "not-a-uuid", minutesPlayed: 999 }]
+    }));
+    expect(response.status).toBe(400);
+    expect((await response.json()).code).toBe("invalid_results");
   });
 
   it("runs a score job against the manually entered results", async () => {
     await postAdminResults(
       createJsonRequest("http://localhost/api/admin/results", {
-        viewerKey: "aino@example.com",
         gameweekSlug: "gw-3",
         stats: [
           {
@@ -100,7 +129,6 @@ describe("admin results routes", () => {
 
     const scoreResponse = await runAdminScore(
       createJsonRequest("http://localhost/api/admin/results/score", {
-        viewerKey: "aino@example.com",
         gameweekSlug: "gw-3"
       })
     );
