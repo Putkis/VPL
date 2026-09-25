@@ -40,6 +40,7 @@ export function AuthPanel() {
   useEffect(() => {
     let isMounted = true;
     const supabase = resolveSupabaseClient();
+
     if (!supabase) {
       return () => {
         isMounted = false;
