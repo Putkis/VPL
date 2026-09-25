@@ -12,6 +12,7 @@ type RootLayoutProps = Readonly<{ children: ReactNode }>;
 
 const demoLinks = [
   { href: "/", label: "Home" },
+  { href: "/onboarding", label: "Onboarding" },
   { href: "/auth", label: "Auth" },
   { href: "/players", label: "Players" },
   { href: "/team-builder", label: "Team Builder" },

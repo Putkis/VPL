@@ -27,6 +27,7 @@ describe("RootLayout", () => {
     expect(html).toContain("<body>");
     expect(html).toContain("aria-label=\"Demo pages\"");
     expect(html).toContain(">VPL Demo<");
+    expect(html).toContain("href=\"/onboarding\"");
     expect(html).toContain("href=\"/auth\"");
     expect(html).toContain(">Team Builder<");
     expect(html).toContain("href=\"/week-view\"");
