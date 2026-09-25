@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { isAdminViewer } from "../../../../../lib/game/admin";
+import { getAuthenticatedAdminEmail } from "../../../../../lib/game/admin";
 import { captureServerError } from "../../../../../lib/observability.server";
 
 const testAlertSchema = z.object({
-  viewerKey: z.string().trim().min(3).max(120),
   message: z.string().trim().min(3).max(280).optional()
 });
 
@@ -19,7 +18,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, code: "invalid_payload" }, { status: 400 });
   }
 
-  if (!isAdminViewer(parsed.data.viewerKey)) {
+  let adminEmail: string | null;
+  try {
+    adminEmail = await getAuthenticatedAdminEmail(request);
+  } catch {
+    return NextResponse.json({ ok: false, code: "auth_unavailable" }, { status: 503 });
+  }
+  if (!adminEmail) {
     return NextResponse.json(
       { ok: false, code: "forbidden", message: "Admin-oikeus puuttuu." },
       { status: 403 }
@@ -39,7 +44,6 @@ export async function POST(request: Request) {
       source: "admin.test-alert",
       route: "/api/admin/ops/test-alert",
       severity: "critical",
-      viewerKey: parsed.data.viewerKey,
       metadata: {
         kind: "staging_test"
       }

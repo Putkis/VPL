@@ -17,7 +17,7 @@ describe("POST /api/ops/errors", () => {
     process.env = originalEnv;
   });
 
-  it("ingests a fatal client error and attempts an alert", async () => {
+  it("ingests a fatal client error without allowing it to trigger an alert", async () => {
     process.env.APP_ENV = "staging";
     process.env.APP_RELEASE = "sha-789";
     process.env.ALERT_WEBHOOK_URL = "https://alerts.example.test";
@@ -47,10 +47,10 @@ describe("POST /api/ops/errors", () => {
     expect(response.status).toBe(200);
     expect(payload).toEqual({
       ok: true,
-      alertAttempted: true,
-      alertSent: true
+      alertAttempted: false,
+      alertSent: false
     });
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).not.toHaveBeenCalled();
     expect(consoleErrorMock).toHaveBeenCalledTimes(1);
   });
 

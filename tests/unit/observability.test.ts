@@ -68,4 +68,23 @@ describe("observability helpers", () => {
       stack: null
     });
   });
+
+  it("does not attempt a webhook call for non-critical errors", async () => {
+    const fetchMock = vi.fn();
+    const consoleErrorMock = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { captureServerError } = await import("../../src/lib/observability.server");
+
+    const result = await captureServerError(new Error("minor"), {
+      source: "test.non-critical"
+    });
+
+    expect(result.alert).toEqual({
+      attempted: false,
+      sent: false
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(consoleErrorMock).toHaveBeenCalledTimes(1);
+  });
 });
