@@ -43,7 +43,6 @@ Set these GitHub repository secrets:
 - `SUPABASE_URL`
 - `SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
-- `ADMIN_EMAILS` (comma-separated emails permitted to enter and run results; no default admin)
 
 Optional repository variables:
 

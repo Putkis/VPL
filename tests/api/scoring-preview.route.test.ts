@@ -1,14 +1,9 @@
 // @vitest-environment node
 
-import { beforeEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { GET } from "../../src/app/api/scoring/preview/route";
-import { clearResultsStoreForTests } from "../../src/lib/game/results-store";
 
 describe("GET /api/scoring/preview", () => {
-  beforeEach(() => {
-    clearResultsStoreForTests();
-  });
-
   it("returns player scores, team scores, and overall ranking", async () => {
     const response = await GET(
       new Request("http://localhost/api/scoring/preview?gameweek=gw-2")

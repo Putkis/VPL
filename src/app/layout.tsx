@@ -15,7 +15,6 @@ const demoLinks = [
   { href: "/auth", label: "Auth" },
   { href: "/players", label: "Players" },
   { href: "/team-builder", label: "Team Builder" },
-  { href: "/admin/results", label: "Admin" },
   { href: "/leaderboard", label: "Leaderboard" },
   { href: "/transfers", label: "Transfers" },
   { href: "/leagues", label: "Leagues" },
