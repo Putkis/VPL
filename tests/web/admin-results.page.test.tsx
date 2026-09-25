@@ -2,7 +2,7 @@ import React from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { AdminResultsPanel } from "../../src/app/admin/results/page";
+import AdminResultsPanel from "../../src/app/admin/results/page";
 
 const fetchMock = vi.fn();
 const { getSessionMock } = vi.hoisted(() => ({

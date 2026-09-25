@@ -82,7 +82,7 @@ function getSeededJsonExample(gameweekSlug: string) {
   return JSON.stringify(defaultsByGameweek[gameweekSlug] ?? defaultsByGameweek["gw-2"], null, 2);
 }
 
-export function AdminResultsPanel() {
+export default function AdminResultsPanel() {
   const [viewerEmail, setViewerEmail] = useState("");
   const [gameweekSlug, setGameweekSlug] = useState("gw-2");
   const [statsJson, setStatsJson] = useState(getSeededJsonExample("gw-2"));
@@ -247,5 +247,3 @@ export function AdminResultsPanel() {
     </section>
   );
 }
-
-export default AdminResultsPanel;
