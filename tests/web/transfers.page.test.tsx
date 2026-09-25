@@ -1,19 +1,14 @@
 import React from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { TransfersPanel } from "../../src/app/transfers/transfers-panel";
 
+vi.mock("../../src/lib/game/gameweeks", () => ({
+  isGameweekLocked: () => false
+}));
+
 describe("TransfersPanel", () => {
-  beforeEach(() => {
-    vi.useFakeTimers({ toFake: ["Date"] });
-    vi.setSystemTime(new Date("2026-04-18T12:54:59.000Z"));
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
   it("shows minus points after the free transfer is exceeded", async () => {
     const user = userEvent.setup();
     render(<TransfersPanel />);

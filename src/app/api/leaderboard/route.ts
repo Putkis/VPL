@@ -3,7 +3,8 @@ import { getLeaderboard, getLeaderboardSummary } from "../../../lib/game/leaderb
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
-  const scope = (url.searchParams.get("scope") as "global" | "friends" | null) ?? "global";
+  const requestedScope = url.searchParams.get("scope");
+  const scope = requestedScope === "friends" ? "friends" : "global";
 
   return NextResponse.json({
     ok: true,

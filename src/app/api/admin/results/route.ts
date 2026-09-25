@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getAdminEmails, isAdminViewer } from "../../../../lib/game/admin";
+import { getAuthenticatedAdminEmail } from "../../../../lib/game/admin";
 import { getPlayerCatalog } from "../../../../lib/game/catalog";
 import { getResolvedPlayerStats, saveGameweekPlayerStats } from "../../../../lib/game/results-store";
 import { seedGameweeks } from "../../../../lib/game/seed-data";
@@ -18,7 +18,6 @@ const statSchema = z.object({
 });
 
 const saveResultsSchema = z.object({
-  viewerKey: z.string().trim().min(3),
   gameweekSlug: z.string().trim().min(1),
   stats: z.array(statSchema).min(1)
 });
@@ -29,7 +28,6 @@ function buildForbiddenResponse() {
       ok: false,
       code: "forbidden",
       message: "Vain admin voi syottaa tuloksia.",
-      admins: getAdminEmails()
     },
     { status: 403 }
   );
@@ -41,6 +39,14 @@ function validatePlayerIds(stats: z.infer<typeof statSchema>[]) {
 }
 
 export async function GET(request: Request) {
+  let adminEmail: string | null;
+  try {
+    adminEmail = await getAuthenticatedAdminEmail(request);
+  } catch {
+    return NextResponse.json({ ok: false, code: "auth_unavailable" }, { status: 503 });
+  }
+  if (!adminEmail) return buildForbiddenResponse();
+
   const url = new URL(request.url);
   const gameweekSlug = url.searchParams.get("gameweek") ?? "gw-2";
 
@@ -56,6 +62,14 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  let adminEmail: string | null;
+  try {
+    adminEmail = await getAuthenticatedAdminEmail(request);
+  } catch {
+    return NextResponse.json({ ok: false, code: "auth_unavailable" }, { status: 503 });
+  }
+  if (!adminEmail) return buildForbiddenResponse();
+
   let body: unknown;
   try {
     body = await request.json();
@@ -66,10 +80,6 @@ export async function POST(request: Request) {
   const parsed = saveResultsSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ ok: false, code: "invalid_results" }, { status: 400 });
-  }
-
-  if (!isAdminViewer(parsed.data.viewerKey)) {
-    return buildForbiddenResponse();
   }
 
   if (!seedGameweeks.some((gameweek) => gameweek.slug === parsed.data.gameweekSlug)) {

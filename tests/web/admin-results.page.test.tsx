@@ -2,13 +2,25 @@ import React from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { AdminResultsPanel } from "../../src/app/admin/results/results-panel";
+import AdminResultsPanel from "../../src/app/admin/results/page";
 
 const fetchMock = vi.fn();
+const { getSessionMock } = vi.hoisted(() => ({
+  getSessionMock: vi.fn(async (): Promise<{ data: { session: { access_token: string; user: { email: string } } | null } }> => ({
+    data: { session: { access_token: "valid-admin-token", user: { email: "aino@example.com" } } }
+  }))
+}));
+
+vi.mock("../../src/lib/supabase/client", () => ({
+  getSupabaseClient: () => ({ auth: { getSession: getSessionMock } })
+}));
 
 describe("AdminResultsPanel", () => {
   beforeEach(() => {
     fetchMock.mockReset();
+    getSessionMock.mockResolvedValue({
+      data: { session: { access_token: "valid-admin-token", user: { email: "aino@example.com" } } }
+    });
     fetchMock.mockImplementation(async (input: string) => {
       if (input === "/api/admin/results") {
         return {
@@ -43,8 +55,9 @@ describe("AdminResultsPanel", () => {
     const user = userEvent.setup();
     render(<AdminResultsPanel />);
 
-    await user.clear(screen.getByLabelText("Viewer / admin email"));
-    await user.type(screen.getByLabelText("Viewer / admin email"), "aino@example.com");
+    await waitFor(() => {
+      expect(screen.getByText(/Kirjautunut käyttäjä: aino@example.com/)).toBeInTheDocument();
+    });
     await user.click(screen.getByRole("button", { name: "Tallenna tulokset" }));
 
     await waitFor(() => {
@@ -57,6 +70,8 @@ describe("AdminResultsPanel", () => {
       expect(screen.getByText(/Pisteytys ajettu gameweekille gw-2/i)).toBeInTheDocument();
     });
     expect(screen.getByText("Viherio CF")).toBeInTheDocument();
+    expect(fetchMock.mock.calls[0][1].headers.Authorization).toBe("Bearer valid-admin-token");
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).not.toHaveProperty("viewerKey");
   });
 
   it("reports malformed JSON before sending the request", async () => {
@@ -70,30 +85,12 @@ describe("AdminResultsPanel", () => {
     expect(screen.getByText("JSON ei ole kelvollinen.")).toBeInTheDocument();
   });
 
-  it("disables both actions while a save is in flight", async () => {
-    let resolveSave: (() => void) | undefined;
-    fetchMock.mockImplementationOnce(
-      () =>
-        new Promise((resolve) => {
-          resolveSave = () =>
-            resolve({
-              ok: true,
-              json: async () => ({ ok: true, savedStatCount: 2 })
-            });
-        })
-    );
-
+  it("does not call the admin API without a signed-in user", async () => {
+    getSessionMock.mockResolvedValue({ data: { session: null } });
     const user = userEvent.setup();
     render(<AdminResultsPanel />);
-
     await user.click(screen.getByRole("button", { name: "Tallenna tulokset" }));
-
-    expect(screen.getByRole("button", { name: "Tallennetaan..." })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Kaynnista pisteytys" })).toBeDisabled();
-
-    resolveSave?.();
-    await waitFor(() => {
-      expect(screen.getByText("Tulokset tallennettu. Riveja 2.")).toBeInTheDocument();
-    });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(screen.getByRole("status")).toHaveTextContent("Kirjaudu sisään admin-tilillä.");
   });
 });

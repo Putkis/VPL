@@ -52,6 +52,11 @@ jobs:
           echo "IMAGE=$IMAGE" >> $GITHUB_ENV
 
       - name: Deploy to Cloud Run
+        env:
+          ADMIN_EMAILS: ${{ secrets.ADMIN_EMAILS }}
+          ALERT_WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
           gcloud run deploy ${{ env.CLOUD_RUN_SERVICE }} \
             --image="$IMAGE" \
@@ -59,4 +64,4 @@ jobs:
             --region=${{ env.GCP_REGION }} \
             --project=${{ secrets.GCP_PROJECT_ID }} \
             --allow-unauthenticated \
-            --set-env-vars=NODE_ENV=production,APP_ENV=production,APP_RELEASE=${{ github.sha }},NEXT_PUBLIC_APP_ENV=production,NEXT_PUBLIC_APP_RELEASE=${{ github.sha }},SUPABASE_URL=${{ secrets.SUPABASE_URL }},SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }},ALERT_WEBHOOK_URL=${{ secrets.ALERT_WEBHOOK_URL }}
+            --set-env-vars="^~^NODE_ENV=production~APP_ENV=production~APP_RELEASE=${{ github.sha }}~NEXT_PUBLIC_APP_ENV=production~NEXT_PUBLIC_APP_RELEASE=${{ github.sha }}~SUPABASE_URL=${SUPABASE_URL}~SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}~ADMIN_EMAILS=${ADMIN_EMAILS}~ALERT_WEBHOOK_URL=${ALERT_WEBHOOK_URL}"
