@@ -23,12 +23,12 @@ vi.mock("@supabase/supabase-js", () => ({
   createClient: createClientMock
 }));
 
-import { getAuthenticatedUserId, getStoredTeam, saveStoredTeam } from "../../src/lib/game/team-store";
+import { getAuthenticatedUser, getStoredTeam, saveStoredTeam } from "../../src/lib/game/team-store";
 
 describe("saved team storage", () => {
   beforeEach(() => {
     process.env.SUPABASE_URL = "https://example.supabase.co";
-    process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role-key";
+    process.env.SUPABASE_ANON_KEY = "anon-key";
     vi.clearAllMocks();
     queryMock.select.mockReturnValue(queryMock);
     queryMock.eq.mockReturnValue(queryMock);
@@ -40,15 +40,15 @@ describe("saved team storage", () => {
     createClientMock.mockReturnValue(client as never);
     getUserMock.mockResolvedValue({ data: { user: { id: "user-123" } }, error: null });
 
-    await expect(getAuthenticatedUserId(new Request("http://localhost", {
+    await expect(getAuthenticatedUser(new Request("http://localhost", {
       headers: { Authorization: "Bearer valid-token" }
-    }))).resolves.toBe("user-123");
+    }))).resolves.toEqual({ userId: "user-123", accessToken: "valid-token" });
     expect(getUserMock).toHaveBeenCalledWith("valid-token");
   });
 
   it("does not create an auth client when a bearer token is missing", async () => {
     createClientMock.mockClear();
-    await expect(getAuthenticatedUserId(new Request("http://localhost"))).resolves.toBeNull();
+    await expect(getAuthenticatedUser(new Request("http://localhost"))).resolves.toBeNull();
     expect(createClientMock).not.toHaveBeenCalled();
   });
 
@@ -61,12 +61,15 @@ describe("saved team storage", () => {
     });
     createClientMock.mockReturnValue({ auth: { getUser: getUserMock }, from: fromMock } as never);
 
-    await expect(getStoredTeam("user-123", "gw-3")).resolves.toMatchObject({
+    await expect(getStoredTeam("user-123", "gw-3", "valid-token")).resolves.toMatchObject({
       ownerId: "user-123", teamName: "Tallennettu", revision: 2
     });
     expect(fromMock).toHaveBeenCalledWith("saved_teams");
     expect(queryMock.eq).toHaveBeenNthCalledWith(1, "owner_id", "user-123");
     expect(queryMock.eq).toHaveBeenNthCalledWith(2, "gameweek_slug", "gw-3");
+    expect(createClientMock).toHaveBeenCalledWith("https://example.supabase.co", "anon-key", expect.objectContaining({
+      global: { headers: { Authorization: "Bearer valid-token" } }
+    }));
   });
 
   it("upserts a team using the authenticated owner and returns the stored revision", async () => {
@@ -79,7 +82,8 @@ describe("saved team storage", () => {
     createClientMock.mockReturnValue({ auth: { getUser: getUserMock }, from: fromMock } as never);
 
     await expect(saveStoredTeam({
-      ownerId: "user-123", gameweekSlug: "gw-3", teamName: "Oma joukkue", playerIds: ["player-1"]
+      ownerId: "user-123", gameweekSlug: "gw-3", teamName: "Oma joukkue",
+      playerIds: ["player-1"], accessToken: "valid-token"
     })).resolves.toMatchObject({ ownerId: "user-123", revision: 1 });
     expect(queryMock.upsert).toHaveBeenCalledWith(expect.objectContaining({ owner_id: "user-123" }), {
       onConflict: "owner_id,gameweek_slug"

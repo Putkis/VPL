@@ -3,7 +3,7 @@ import { z } from "zod";
 import { getPlayerCatalog } from "../../../lib/game/catalog";
 import { getGameweekBySlug, isGameweekLocked } from "../../../lib/game/gameweeks";
 import { validateTeamSelection } from "../../../lib/game/team-rules";
-import { getAuthenticatedUserId, getStoredTeam, saveStoredTeam } from "../../../lib/game/team-store";
+import { getAuthenticatedUser, getStoredTeam, saveStoredTeam } from "../../../lib/game/team-store";
 
 const teamSchema = z.object({
   teamName: z.string().trim().min(3).max(30),
@@ -33,7 +33,7 @@ function buildLockedGameweekResponse() {
   );
 }
 
-async function buildTeamPayload(data: z.infer<typeof teamSchema>, ownerId: string) {
+async function buildTeamPayload(data: z.infer<typeof teamSchema>, ownerId: string, accessToken: string) {
   const catalog = getPlayerCatalog();
   const selectedPlayers = data.playerIds
     .map((playerId) => catalog.find((player) => player.id === playerId))
@@ -57,7 +57,7 @@ async function buildTeamPayload(data: z.infer<typeof teamSchema>, ownerId: strin
     );
   }
 
-  const savedTeam = await saveStoredTeam({ ...data, ownerId });
+  const savedTeam = await saveStoredTeam({ ...data, ownerId, accessToken });
 
   return NextResponse.json({
     ok: true,
@@ -82,13 +82,13 @@ function parseBody(request: Request) {
 }
 
 async function saveTeamFromRequest(request: Request) {
-  let ownerId: string | null;
+  let auth: Awaited<ReturnType<typeof getAuthenticatedUser>>;
   try {
-    ownerId = await getAuthenticatedUserId(request);
+    auth = await getAuthenticatedUser(request);
   } catch {
     return NextResponse.json({ ok: false, code: "team_storage_unavailable" }, { status: 503 });
   }
-  if (!ownerId) return NextResponse.json({ ok: false, code: "unauthorized" }, { status: 401 });
+  if (!auth) return NextResponse.json({ ok: false, code: "unauthorized" }, { status: 401 });
   const body = await parseBody(request);
   if (!body) {
     return NextResponse.json({ ok: false, code: "invalid_payload" }, { status: 400 });
@@ -108,25 +108,25 @@ async function saveTeamFromRequest(request: Request) {
   }
 
   try {
-    return await buildTeamPayload(parsed.data, ownerId);
+    return await buildTeamPayload(parsed.data, auth.userId, auth.accessToken);
   } catch {
     return NextResponse.json({ ok: false, code: "team_storage_unavailable" }, { status: 503 });
   }
 }
 
 export async function GET(request: Request) {
-  let ownerId: string | null;
+  let auth: Awaited<ReturnType<typeof getAuthenticatedUser>>;
   try {
-    ownerId = await getAuthenticatedUserId(request);
+    auth = await getAuthenticatedUser(request);
   } catch {
     return NextResponse.json({ ok: false, code: "team_storage_unavailable" }, { status: 503 });
   }
-  if (!ownerId) return NextResponse.json({ ok: false, code: "unauthorized" }, { status: 401 });
+  if (!auth) return NextResponse.json({ ok: false, code: "unauthorized" }, { status: 401 });
   const url = new URL(request.url);
   const gameweekSlug = url.searchParams.get("gameweek")?.trim() ?? "gw-3";
   let team: Awaited<ReturnType<typeof getStoredTeam>>;
   try {
-    team = await getStoredTeam(ownerId, gameweekSlug);
+    team = await getStoredTeam(auth.userId, gameweekSlug, auth.accessToken);
   } catch {
     return NextResponse.json({ ok: false, code: "team_storage_unavailable" }, { status: 503 });
   }
