@@ -1,9 +1,18 @@
 // @vitest-environment node
 
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { quoteTransfer } from "../../src/lib/game/transfers";
 
 describe("transfer penalties", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-03-18T12:00:00.000Z"));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("keeps the first transfer free", () => {
     const quote = quoteTransfer({
       gameweekSlug: "gw-3",

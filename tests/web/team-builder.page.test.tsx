@@ -2,6 +2,7 @@ import React from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import TeamBuilderPage from "../../src/app/team-builder/page";
 import { TeamBuilder } from "../../src/app/team-builder/team-builder";
 import { getPlayerCatalog } from "../../src/lib/game/catalog";
 
