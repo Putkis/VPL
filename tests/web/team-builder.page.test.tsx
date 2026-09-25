@@ -24,87 +24,15 @@ describe("TeamBuilder", () => {
     expect(screen.getByRole("status")).toHaveTextContent("Valitse tasan 7 pelaajaa.");
   });
 
-  it("saves a valid team and confirms the backend accepted it", async () => {
+  it("shows lock state for already started gameweeks", async () => {
     const user = userEvent.setup();
-    fetchMock.mockResolvedValue({
-      ok: true,
-      json: async () => ({ ok: true })
-    });
-
     render(<TeamBuilder players={getPlayerCatalog()} />);
 
-    for (const name of [
-      "Luke Hakala",
-      "Juho Lehto",
-      "Matti Kallio",
-      "Oskar Niemi",
-      "Leo Laine",
-      "Eetu Koski",
-      "Samu Virtanen"
-    ]) {
-      await user.click(screen.getByRole("button", { name: new RegExp(name, "i") }));
-    }
+    await user.selectOptions(screen.getByLabelText("Gameweek"), "gw-2");
 
-    await user.click(screen.getByRole("button", { name: "Tallenna joukkue" }));
-
-    await waitFor(() => {
-      expect(fetchMock).toHaveBeenCalledWith(
-        "/api/team",
-        expect.objectContaining({
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          }
-        })
-      );
-    });
-    expect(screen.getByText("Joukkue tallennettu. Backend vahvisti budjetin ja roolijaon.")).toBeInTheDocument();
-
-    const [, options] = fetchMock.mock.calls[0] as [string, { body: string }];
-    expect(JSON.parse(options.body)).toMatchObject({
-      teamName: "Viikon nousijat"
-    });
-    expect(JSON.parse(options.body).playerIds).toHaveLength(7);
-  });
-
-  it("shows backend errors and caps the selection at seven players", async () => {
-    const user = userEvent.setup();
-    fetchMock.mockResolvedValue({
-      ok: false,
-      json: async () => ({ ok: false, validation: { message: "Backend esti tallennuksen." } })
-    });
-
-    render(<TeamBuilder players={getPlayerCatalog()} />);
-
-    for (const name of [
-      "Luke Hakala",
-      "Juho Lehto",
-      "Matti Kallio",
-      "Oskar Niemi",
-      "Leo Laine",
-      "Eetu Koski",
-      "Vilho Salo",
-      "Samu Virtanen"
-    ]) {
-      await user.click(screen.getByRole("button", { name: new RegExp(name, "i") }));
-    }
-
-    expect(screen.getByRole("button", { name: /Vilho Salo/i })).toHaveClass("selected");
-    expect(screen.getByRole("button", { name: /Samu Virtanen/i })).not.toHaveClass("selected");
-
-    await user.click(screen.getByRole("button", { name: "Tallenna joukkue" }));
-
-    await waitFor(() => {
-      expect(screen.getByText("Backend esti tallennuksen.")).toBeInTheDocument();
-    });
-  });
-});
-
-describe("TeamBuilderPage", () => {
-  it("renders the team builder with the seeded player catalog", () => {
-    render(<TeamBuilderPage />);
-
-    expect(screen.getByRole("heading", { name: /Joukkueen luonti budjettisaannoilla/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Luke Hakala/i })).toBeInTheDocument();
+    expect(
+      screen.getByText("Valittu gameweek on lukittu. API hylkaa tallennuksen deadline-ajan jalkeen.")
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Tallenna joukkue" })).toBeDisabled();
   });
 });

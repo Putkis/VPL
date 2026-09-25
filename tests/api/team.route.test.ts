@@ -1,6 +1,6 @@
 // @vitest-environment node
 
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { POST } from "../../src/app/api/team/route";
 import { getPlayerCatalog } from "../../src/lib/game/catalog";
 
@@ -25,6 +25,15 @@ function createRawPostRequest(body: string) {
 }
 
 describe("POST /api/team", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-03-18T12:00:00.000Z"));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   const balancedIds = getPlayerCatalog()
     .filter((player) =>
       [
@@ -57,7 +66,8 @@ describe("POST /api/team", () => {
     const response = await POST(
       createPostRequest({
         teamName: "Tasapaino",
-        playerIds: balancedIds
+        playerIds: balancedIds,
+        gameweekSlug: "gw-3"
       })
     );
 
@@ -71,7 +81,8 @@ describe("POST /api/team", () => {
     const response = await POST(
       createPostRequest({
         teamName: "Virhe",
-        playerIds: ["00000000-0000-4000-8000-999999999999"]
+        playerIds: ["00000000-0000-4000-8000-999999999999"],
+        gameweekSlug: "gw-3"
       })
     );
 
@@ -108,7 +119,8 @@ describe("POST /api/team", () => {
     const response = await POST(
       createPostRequest({
         teamName: "Liian kallis",
-        playerIds: expensiveIds
+        playerIds: expensiveIds,
+        gameweekSlug: "gw-3"
       })
     );
 
@@ -118,5 +130,24 @@ describe("POST /api/team", () => {
     expect(payload.ok).toBe(false);
     expect(payload.code).toBe("budget_exceeded");
     expect(payload.message).toContain("Budjetti ylittyy");
+  });
+
+  it("rejects team changes for locked gameweeks", async () => {
+    const response = await POST(
+      createPostRequest({
+        teamName: "Lukittu",
+        playerIds: balancedIds,
+        gameweekSlug: "gw-2"
+      })
+    );
+
+    const payload = await response.json();
+
+    expect(response.status).toBe(423);
+    expect(payload).toEqual({
+      ok: false,
+      code: "gameweek_locked",
+      message: "Gameweek on lukittu. Muutokset eivat ole enaa sallittuja."
+    });
   });
 });
