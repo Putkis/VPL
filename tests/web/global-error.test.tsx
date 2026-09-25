@@ -50,6 +50,6 @@ describe("GlobalError", () => {
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledTimes(1);
     });
-    expect(screen.getByText(/Virhe kirjattiin observability-putkeen/i)).toBeInTheDocument();
+    expect(screen.getByText(/Virheesta lahetetaan raportti/i)).toBeInTheDocument();
   });
 });

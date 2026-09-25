@@ -24,11 +24,13 @@ export async function POST(request: Request) {
   const result = await captureServerError(new Error(parsed.data.message), {
     source: parsed.data.source,
     route: "/api/ops/errors",
-    severity: parsed.data.fatal ? "critical" : "error",
+    // Client-originated reports are untrusted and must never trigger paging.
+    severity: "error",
     stackOverride: parsed.data.stack ?? null,
     metadata: {
       digest: parsed.data.digest ?? null,
-      kind: "client_report"
+      kind: "client_report",
+      clientReportedFatal: parsed.data.fatal ?? false
     }
   });
 

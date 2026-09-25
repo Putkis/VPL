@@ -74,7 +74,6 @@ export async function POST(request: Request) {
       route: "/api/waitlist",
       severity: "critical",
       metadata: {
-        email: parsedPayload.data.email,
         topFeatureInterest: parsedPayload.data.topFeatureInterest
       }
     });

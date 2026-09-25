@@ -39,7 +39,7 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
             <p className="eyebrow">Virhe</p>
             <h1>Sovellus kohtasi kriittisen virheen</h1>
             <p className="status status-error">
-              Virhe kirjattiin observability-putkeen. Yrita uudelleen tai tarkista staging-alertti.
+              Virheesta lahetetaan raportti. Yrita uudelleen tai jatka myohemmin.
             </p>
             <button type="button" className="auth-submit" onClick={() => reset()}>
               Yrita uudelleen

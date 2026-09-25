@@ -4,6 +4,14 @@ import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
+const { getAuthenticatedAdminEmailMock } = vi.hoisted(() => ({
+  getAuthenticatedAdminEmailMock: vi.fn()
+}));
+
+vi.mock("../../src/lib/game/admin", () => ({
+  getAuthenticatedAdminEmail: getAuthenticatedAdminEmailMock
+}));
+
 const originalEnv = { ...process.env };
 
 describe("POST /api/admin/ops/test-alert", () => {
@@ -11,6 +19,7 @@ describe("POST /api/admin/ops/test-alert", () => {
     vi.resetModules();
     vi.restoreAllMocks();
     process.env = { ...originalEnv };
+    getAuthenticatedAdminEmailMock.mockReset();
   });
 
   afterAll(() => {
@@ -18,6 +27,7 @@ describe("POST /api/admin/ops/test-alert", () => {
   });
 
   it("rejects non-admin callers", async () => {
+    getAuthenticatedAdminEmailMock.mockResolvedValue(null);
     const { POST } = await import("../../src/app/api/admin/ops/test-alert/route");
     const response = await POST(
       new Request("http://localhost/api/admin/ops/test-alert", {
@@ -26,7 +36,8 @@ describe("POST /api/admin/ops/test-alert", () => {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          viewerKey: "viewer@example.com"
+          viewerKey: "admin@example.com",
+          message: "test alert"
         })
       })
     );
@@ -55,18 +66,17 @@ describe("POST /api/admin/ops/test-alert", () => {
   });
 
   it("returns 503 when the alert webhook is missing", async () => {
-    process.env.ADMIN_EMAILS = "aino@example.com";
+    getAuthenticatedAdminEmailMock.mockResolvedValue("aino@example.com");
 
     const { POST } = await import("../../src/app/api/admin/ops/test-alert/route");
     const response = await POST(
       new Request("http://localhost/api/admin/ops/test-alert", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          Authorization: "Bearer valid-test-token"
         },
-        body: JSON.stringify({
-          viewerKey: "aino@example.com"
-        })
+        body: JSON.stringify({ message: "test alert" })
       })
     );
     const payload = await response.json();
@@ -80,7 +90,7 @@ describe("POST /api/admin/ops/test-alert", () => {
   });
 
   it("sends a critical alert for an admin caller when webhook is configured", async () => {
-    process.env.ADMIN_EMAILS = "aino@example.com";
+    getAuthenticatedAdminEmailMock.mockResolvedValue("aino@example.com");
     process.env.APP_ENV = "staging";
     process.env.APP_RELEASE = "sha-999";
     process.env.ALERT_WEBHOOK_URL = "https://alerts.example.test";
@@ -94,10 +104,10 @@ describe("POST /api/admin/ops/test-alert", () => {
       new Request("http://localhost/api/admin/ops/test-alert", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          Authorization: "Bearer valid-test-token"
         },
         body: JSON.stringify({
-          viewerKey: "aino@example.com",
           message: "Stage smoke alert"
         })
       })
@@ -113,5 +123,21 @@ describe("POST /api/admin/ops/test-alert", () => {
       release: "sha-999"
     });
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns service unavailable when session verification fails", async () => {
+    getAuthenticatedAdminEmailMock.mockRejectedValue(new Error("auth unavailable"));
+
+    const { POST } = await import("../../src/app/api/admin/ops/test-alert/route");
+    const response = await POST(
+      new Request("http://localhost/api/admin/ops/test-alert", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: "test alert" })
+      })
+    );
+
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ ok: false, code: "auth_unavailable" });
   });
 });
