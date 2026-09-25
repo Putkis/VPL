@@ -8,7 +8,9 @@ const teamStoreMocks = vi.hoisted(() => {
   const records = new Map<string, Record<string, unknown>>();
   return {
     records,
-    getAuthenticatedUserId: vi.fn(async (): Promise<string | null> => "user-123"),
+    getAuthenticatedUser: vi.fn(async (): Promise<{ userId: string; accessToken: string } | null> => ({
+      userId: "user-123", accessToken: "valid-test-token"
+    })),
     getStoredTeam: vi.fn(async (ownerId: string, gameweekSlug: string) =>
       records.get(`${ownerId}::${gameweekSlug}`) ?? null
     ),
@@ -46,7 +48,8 @@ function createRawPostRequest(body: string) {
   return new Request("http://localhost/api/team", {
     method: "POST",
     headers: {
-      "Content-Type": "application/json"
+      "Content-Type": "application/json",
+      Authorization: "Bearer valid-test-token"
     },
     body
   });
@@ -62,7 +65,7 @@ function createGetRequest(_viewerKey?: string, gameweek = "gw-3") {
 describe("POST /api/team", () => {
   beforeEach(() => {
     teamStoreMocks.records.clear();
-    teamStoreMocks.getAuthenticatedUserId.mockResolvedValue("user-123");
+    teamStoreMocks.getAuthenticatedUser.mockResolvedValue({ userId: "user-123", accessToken: "valid-test-token" });
     teamStoreMocks.getStoredTeam.mockClear();
     teamStoreMocks.saveStoredTeam.mockClear();
     vi.useFakeTimers();
@@ -205,7 +208,7 @@ describe("POST /api/team", () => {
   });
 
   it("rejects unauthenticated saves", async () => {
-    teamStoreMocks.getAuthenticatedUserId.mockResolvedValueOnce(null);
+    teamStoreMocks.getAuthenticatedUser.mockResolvedValueOnce(null);
     const response = await POST(createPostRequest({ teamName: "Tasapaino", playerIds: balancedIds }));
     expect(response.status).toBe(401);
     expect(await response.json()).toEqual({ ok: false, code: "unauthorized" });
@@ -256,7 +259,7 @@ describe("POST /api/team", () => {
   });
 
   it("rejects saved-team reads without authentication", async () => {
-    teamStoreMocks.getAuthenticatedUserId.mockResolvedValueOnce(null);
+    teamStoreMocks.getAuthenticatedUser.mockResolvedValueOnce(null);
     const response = await GET(new Request("http://localhost/api/team?gameweek=gw-3"));
     const payload = await response.json();
 

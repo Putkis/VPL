@@ -15,27 +15,29 @@ type SaveStoredTeamInput = {
   playerIds: string[];
 };
 
-function getSupabase() {
+function getSupabase(accessToken?: string) {
   const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const key = process.env.SUPABASE_ANON_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) throw new Error("Team storage is not configured");
   return createClient(url, key, {
-    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    global: accessToken ? { headers: { Authorization: `Bearer ${accessToken}` } } : undefined
   });
 }
 
-export async function getAuthenticatedUserId(request: Request) {
+export async function getAuthenticatedUser(request: Request) {
   const accessToken = request.headers.get("authorization")?.match(/^Bearer\s+(.+)$/i)?.[1];
   if (!accessToken) return null;
   const { data, error } = await getSupabase().auth.getUser(accessToken);
-  return error ? null : data.user?.id ?? null;
+  return error || !data.user ? null : { userId: data.user.id, accessToken };
 }
 
 export async function getStoredTeam(
   ownerId: string,
-  gameweekSlug: string
+  gameweekSlug: string,
+  accessToken: string
 ): Promise<StoredTeamRecord | null> {
-  const { data, error } = await getSupabase()
+  const { data, error } = await getSupabase(accessToken)
     .from("saved_teams")
     .select("owner_id,gameweek_slug,team_name,player_ids,revision,updated_at")
     .eq("owner_id", ownerId)
@@ -55,9 +57,9 @@ export async function getStoredTeam(
 }
 
 export async function saveStoredTeam(
-  input: SaveStoredTeamInput & { ownerId: string }
+  input: SaveStoredTeamInput & { ownerId: string; accessToken: string }
 ): Promise<StoredTeamRecord> {
-  const { data, error } = await getSupabase()
+  const { data, error } = await getSupabase(input.accessToken)
     .from("saved_teams")
     .upsert({
       owner_id: input.ownerId,

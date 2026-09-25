@@ -11,6 +11,18 @@ create table if not exists public.saved_teams (
 
 alter table public.saved_teams enable row level security;
 
+drop policy if exists saved_teams_select_own on public.saved_teams;
+create policy saved_teams_select_own on public.saved_teams
+  for select using (auth.uid() = owner_id);
+
+drop policy if exists saved_teams_insert_own on public.saved_teams;
+create policy saved_teams_insert_own on public.saved_teams
+  for insert with check (auth.uid() = owner_id);
+
+drop policy if exists saved_teams_update_own on public.saved_teams;
+create policy saved_teams_update_own on public.saved_teams
+  for update using (auth.uid() = owner_id) with check (auth.uid() = owner_id);
+
 create or replace function public.bump_saved_team_revision()
 returns trigger
 language plpgsql
