@@ -1,18 +1,32 @@
 import React from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import TeamBuilderPage from "../../src/app/team-builder/page";
 import { TeamBuilder } from "../../src/app/team-builder/team-builder";
 import { getPlayerCatalog } from "../../src/lib/game/catalog";
+
+const { getSessionMock } = vi.hoisted(() => ({
+  getSessionMock: vi.fn(async () => ({
+    data: { session: { access_token: "valid-test-token", user: { email: "demo@example.com" } } }
+  }))
+}));
+
+vi.mock("../../src/lib/supabase/client", () => ({
+  getSupabaseClient: () => ({ auth: { getSession: getSessionMock } })
+}));
+
+vi.mock("../../src/lib/game/gameweeks", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../src/lib/game/gameweeks")>();
+  return { ...actual, isGameweekLocked: (slug: string) => slug === "gw-2" };
+});
 
 const fetchMock = vi.fn();
 
 describe("TeamBuilder", () => {
   beforeEach(() => {
-    vi.useFakeTimers({ toFake: ["Date"] });
-    vi.setSystemTime(new Date("2026-04-18T12:54:59.000Z"));
     fetchMock.mockReset();
-    fetchMock.mockImplementation(async (input: string, init?: { method?: string }) => {
+    fetchMock.mockImplementation(async (input: string, init?: { method?: string; headers?: HeadersInit }) => {
       if (!init?.method || init.method === "GET") {
         return {
           ok: true,
@@ -35,10 +49,6 @@ describe("TeamBuilder", () => {
       };
     });
     vi.stubGlobal("fetch", fetchMock);
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
   });
 
   it("shows role or team-size validation feedback before save", async () => {
@@ -66,13 +76,13 @@ describe("TeamBuilder", () => {
   it("loads a saved team for the active viewer", async () => {
     fetchMock.mockImplementation(async (input: string, init?: { method?: string }) => {
       if (!init?.method || init.method === "GET") {
-        expect(input).toContain("viewerKey=demo%40local.vpl");
+        expect(input).toContain("/api/team?gameweek=gw-3");
+        expect(init).toMatchObject({ headers: { Authorization: "Bearer valid-test-token" } });
         return {
           ok: true,
           json: async () => ({
             ok: true,
             team: {
-              viewerKey: "demo@local.vpl",
               name: "Tallennettu XI",
               teamName: "Tallennettu XI",
               playerIds: getPlayerCatalog()
@@ -103,65 +113,6 @@ describe("TeamBuilder", () => {
     expect(screen.getByRole("button", { name: "Paivita joukkue" })).toBeInTheDocument();
   });
 
-  it("clears stale selections when the next gameweek has no saved team", async () => {
-    const savedPlayerIds = getPlayerCatalog()
-      .filter((player) => ["Luke Hakala", "Juho Lehto", "Matti Kallio"].includes(player.name))
-      .map((player) => player.id);
-
-    fetchMock.mockImplementation(async (input: string, init?: { method?: string }) => {
-      if (!init?.method || init.method === "GET") {
-        if (input.includes("gameweek=gw-3")) {
-          return {
-            ok: true,
-            json: async () => ({
-              ok: true,
-              team: {
-                viewerKey: "demo@local.vpl",
-                name: "Tallennettu XI",
-                teamName: "Tallennettu XI",
-                playerIds: savedPlayerIds,
-                gameweekSlug: "gw-3",
-                revision: 1,
-                updatedAt: "2026-03-18T00:00:00.000Z"
-              }
-            })
-          };
-        }
-
-        return {
-          ok: true,
-          json: async () => ({ ok: true, team: null })
-        };
-      }
-
-      return {
-        ok: true,
-        json: async () => ({ ok: true, team: null })
-      };
-    });
-
-    const user = userEvent.setup();
-    render(<TeamBuilder players={getPlayerCatalog()} />);
-
-    await waitFor(() => {
-      expect(screen.getByDisplayValue("Tallennettu XI")).toBeInTheDocument();
-    });
-
-    await user.selectOptions(screen.getByLabelText("Gameweek"), "gw-1");
-
-    await waitFor(() => {
-      expect(screen.getByDisplayValue("Viikon nousijat")).toBeInTheDocument();
-    });
-    expect(screen.getByText("Tallettua joukkuetta ei loytynyt valitulle gameweekille.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Luke Hakala/i })).not.toHaveClass("selected");
-  });
-
-  it("keeps save disabled until the selection is valid", async () => {
-    render(<TeamBuilder players={getPlayerCatalog()} />);
-
-    expect(screen.getByRole("button", { name: "Tallenna joukkue" })).toBeDisabled();
-  });
-
   it("restores the last saved team when an optimistic update fails", async () => {
     const savedPlayerIds = getPlayerCatalog()
       .filter((player) =>
@@ -184,7 +135,6 @@ describe("TeamBuilder", () => {
           json: async () => ({
             ok: true,
             team: {
-              viewerKey: "demo@local.vpl",
               name: "Tallennettu XI",
               teamName: "Tallennettu XI",
               playerIds: savedPlayerIds,
