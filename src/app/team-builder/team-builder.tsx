@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { CatalogPlayer } from "../../lib/game/catalog";
+import { getSupabaseClient } from "../../lib/supabase/client";
 import { seedGameweeks } from "../../lib/game/seed-data";
 import { TEAM_BUDGET_CENTS, TEAM_FORMATION_RULES, TEAM_SIZE, validateTeamSelection } from "../../lib/game/team-rules";
 import { isGameweekLocked } from "../../lib/game/gameweeks";
@@ -10,36 +11,204 @@ type TeamBuilderProps = {
   players: CatalogPlayer[];
 };
 
+type PersistedTeamResponse = {
+  ok: boolean;
+  team: {
+    name: string;
+    playerIds: string[];
+    gameweekSlug: string;
+    revision: number;
+    updatedAt: string;
+  } | null;
+};
+
+type SaveTeamResponse = {
+  ok: boolean;
+  message?: string;
+  validation?: { message: string };
+  team?: {
+    name: string;
+    playerIds: string[];
+    gameweekSlug: string;
+    revision: number;
+    updatedAt: string;
+  };
+};
+
 export function TeamBuilder({ players }: TeamBuilderProps) {
   const [teamName, setTeamName] = useState("Viikon nousijat");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [gameweekSlug, setGameweekSlug] = useState("gw-3");
+  const [viewerEmail, setViewerEmail] = useState("");
+  const [accessToken, setAccessToken] = useState("");
+  const [loadStatus, setLoadStatus] = useState("Ladataan mahdollinen tallennettu joukkue...");
+  const [isLoadingSavedTeam, setIsLoadingSavedTeam] = useState(true);
+  const [isPersisted, setIsPersisted] = useState(false);
+  const [lastSavedSnapshot, setLastSavedSnapshot] = useState<{
+    teamName: string;
+    playerIds: string[];
+    gameweekSlug: string;
+    revision: number;
+    updatedAt: string;
+  } | null>(null);
   const [status, setStatus] = useState("Valitse kokoonpano ja tallenna backend-validaatiolla.");
+
+  useEffect(() => {
+    let isMounted = true;
+    try {
+      void getSupabaseClient().auth.getSession().then(({ data }) => {
+        if (isMounted && data.session) {
+          setViewerEmail(data.session.user.email ?? "");
+          setAccessToken(data.session.access_token);
+        }
+      }).catch(() => {
+        if (isMounted) setLoadStatus("Kirjaudu sisään ladataksesi tallennetun joukkueen.");
+      });
+    } catch {
+      setLoadStatus("Kirjaudu sisään Supabase-tilillä tallentaaksesi joukkueen.");
+      setIsLoadingSavedTeam(false);
+    }
+    return () => { isMounted = false; };
+  }, []);
 
   const selectedPlayers = players.filter((player) => selectedIds.includes(player.id));
   const validation = validateTeamSelection(selectedPlayers);
   const locked = isGameweekLocked(gameweekSlug);
 
-  async function saveTeam() {
-    const response = await fetch("/api/team", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        teamName,
-        playerIds: selectedIds,
-        gameweekSlug
-      })
-    });
+  useEffect(() => {
+    let isMounted = true;
 
-    const payload = (await response.json()) as { ok: boolean; message?: string; validation?: { message: string } };
-    if (!response.ok) {
-      setStatus(payload.message ?? payload.validation?.message ?? "Tallennus epaonnistui.");
-      return;
+    async function loadSavedTeam() {
+      if (!accessToken) {
+        setIsLoadingSavedTeam(false);
+        setLoadStatus("Kirjaudu sisään ladataksesi tallennetun joukkueen.");
+        return;
+      }
+      setIsLoadingSavedTeam(true);
+
+      try {
+        const response = await fetch(
+          `/api/team?gameweek=${encodeURIComponent(gameweekSlug)}`,
+          { headers: { Authorization: `Bearer ${accessToken}` } }
+        );
+        const payload = (await response.json()) as PersistedTeamResponse;
+
+        if (!isMounted) {
+          return;
+        }
+
+        if (!response.ok) {
+          setLoadStatus("Tallennetun joukkueen lataus epaonnistui.");
+          setIsPersisted(false);
+          return;
+        }
+
+        if (!payload.team) {
+          setLoadStatus("Tallettua joukkuetta ei loytynyt valitulle gameweekille.");
+          setIsPersisted(false);
+          setLastSavedSnapshot(null);
+          return;
+        }
+
+        setTeamName(payload.team.name);
+        setSelectedIds(payload.team.playerIds);
+        setIsPersisted(true);
+        setLastSavedSnapshot({
+          teamName: payload.team.name,
+          playerIds: payload.team.playerIds,
+          gameweekSlug: payload.team.gameweekSlug,
+          revision: payload.team.revision,
+          updatedAt: payload.team.updatedAt
+        });
+        setLoadStatus(
+          `Tallennettu joukkue ladattu. Versio ${payload.team.revision} / ${payload.team.updatedAt.slice(0, 10)}.`
+        );
+      } catch {
+        if (isMounted) {
+          setLoadStatus("Tallennetun joukkueen lataus epaonnistui.");
+          setIsPersisted(false);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingSavedTeam(false);
+        }
+      }
     }
 
-    setStatus("Joukkue tallennettu. Backend vahvisti budjetin ja roolijaon.");
+    void loadSavedTeam();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [gameweekSlug, accessToken]);
+
+  async function saveTeam() {
+    const previousSnapshot = lastSavedSnapshot;
+    if (!accessToken) {
+      setStatus("Kirjaudu sisään ennen joukkueen tallentamista.");
+      return;
+    }
+    setStatus(
+      isPersisted
+        ? "Paivitetaan joukkuetta optimistic UI:lla. Virhetilassa palautetaan viimeisin tallennettu versio."
+        : "Tallennetaan joukkuetta optimistic UI:lla."
+    );
+
+    try {
+      const response = await fetch("/api/team", {
+        method: isPersisted ? "PUT" : "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`
+        },
+        body: JSON.stringify({
+          teamName,
+          playerIds: selectedIds,
+          gameweekSlug
+        })
+      });
+
+      const payload = (await response.json()) as SaveTeamResponse;
+      if (!response.ok || !payload.team) {
+        if (previousSnapshot) {
+          setTeamName(previousSnapshot.teamName);
+          setSelectedIds(previousSnapshot.playerIds);
+          setGameweekSlug(previousSnapshot.gameweekSlug);
+          setStatus(
+            payload.message ??
+              payload.validation?.message ??
+              "Tallennus epaonnistui. Edellinen versio palautettiin."
+          );
+          return;
+        }
+
+        setStatus(payload.message ?? payload.validation?.message ?? "Tallennus epaonnistui.");
+        return;
+      }
+
+      setIsPersisted(true);
+      setLastSavedSnapshot({
+        teamName: payload.team.name,
+        playerIds: payload.team.playerIds,
+        gameweekSlug: payload.team.gameweekSlug,
+        revision: payload.team.revision,
+        updatedAt: payload.team.updatedAt
+      });
+      setLoadStatus(
+        `Tallennettu joukkue ladattu. Versio ${payload.team.revision} / ${payload.team.updatedAt.slice(0, 10)}.`
+      );
+      setStatus("Joukkue tallennettu. Backend vahvisti budjetin, roolijaon ja persistenssin.");
+    } catch {
+      if (previousSnapshot) {
+        setTeamName(previousSnapshot.teamName);
+        setSelectedIds(previousSnapshot.playerIds);
+        setGameweekSlug(previousSnapshot.gameweekSlug);
+        setStatus("Tallennus epaonnistui. Edellinen versio palautettiin.");
+        return;
+      }
+
+      setStatus("Tallennus epaonnistui.");
+    }
   }
 
   function togglePlayer(playerId: string) {
@@ -88,6 +257,10 @@ export function TeamBuilder({ players }: TeamBuilderProps) {
 
         <div className="builder-summary">
           <div>
+            <strong>{viewerEmail || "Ei kirjautunut"}</strong>
+            <span>{viewerEmail ? " kirjautunut käyttäjä" : " aktiivinen käyttäjä"}</span>
+          </div>
+          <div>
             <strong>{selectedPlayers.length}</strong>
             <span> / {TEAM_SIZE} valittu</span>
           </div>
@@ -96,6 +269,10 @@ export function TeamBuilder({ players }: TeamBuilderProps) {
             <span> kaytetty</span>
           </div>
         </div>
+
+        <p className={isLoadingSavedTeam ? "status status-submitting" : "status status-idle"}>
+          {loadStatus}
+        </p>
 
         <ul className="rule-list">
           {Object.entries(TEAM_FORMATION_RULES).map(([position, rule]) => (
@@ -115,8 +292,13 @@ export function TeamBuilder({ players }: TeamBuilderProps) {
           {validation.message}
         </p>
         <p className="status status-idle">{status}</p>
-        <button type="button" className="auth-submit" onClick={saveTeam} disabled={locked}>
-          Tallenna joukkue
+        <button
+          type="button"
+          className="auth-submit"
+          onClick={saveTeam}
+          disabled={locked || isLoadingSavedTeam}
+        >
+          {isPersisted ? "Paivita joukkue" : "Tallenna joukkue"}
         </button>
       </div>
 
