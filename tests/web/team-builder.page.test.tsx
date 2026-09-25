@@ -6,12 +6,27 @@ import TeamBuilderPage from "../../src/app/team-builder/page";
 import { TeamBuilder } from "../../src/app/team-builder/team-builder";
 import { getPlayerCatalog } from "../../src/lib/game/catalog";
 
+const { getSessionMock } = vi.hoisted(() => ({
+  getSessionMock: vi.fn(async () => ({
+    data: { session: { access_token: "valid-test-token", user: { email: "demo@example.com" } } }
+  }))
+}));
+
+vi.mock("../../src/lib/supabase/client", () => ({
+  getSupabaseClient: () => ({ auth: { getSession: getSessionMock } })
+}));
+
+vi.mock("../../src/lib/game/gameweeks", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../src/lib/game/gameweeks")>();
+  return { ...actual, isGameweekLocked: (slug: string) => slug === "gw-2" };
+});
+
 const fetchMock = vi.fn();
 
 describe("TeamBuilder", () => {
   beforeEach(() => {
     fetchMock.mockReset();
-    fetchMock.mockImplementation(async (input: string, init?: { method?: string }) => {
+    fetchMock.mockImplementation(async (input: string, init?: { method?: string; headers?: HeadersInit }) => {
       if (!init?.method || init.method === "GET") {
         return {
           ok: true,
@@ -61,13 +76,13 @@ describe("TeamBuilder", () => {
   it("loads a saved team for the active viewer", async () => {
     fetchMock.mockImplementation(async (input: string, init?: { method?: string }) => {
       if (!init?.method || init.method === "GET") {
-        expect(input).toContain("viewerKey=demo%40local.vpl");
+        expect(input).toContain("/api/team?gameweek=gw-3");
+        expect(init).toMatchObject({ headers: { Authorization: "Bearer valid-test-token" } });
         return {
           ok: true,
           json: async () => ({
             ok: true,
             team: {
-              viewerKey: "demo@local.vpl",
               name: "Tallennettu XI",
               teamName: "Tallennettu XI",
               playerIds: getPlayerCatalog()
@@ -120,7 +135,6 @@ describe("TeamBuilder", () => {
           json: async () => ({
             ok: true,
             team: {
-              viewerKey: "demo@local.vpl",
               name: "Tallennettu XI",
               teamName: "Tallennettu XI",
               playerIds: savedPlayerIds,

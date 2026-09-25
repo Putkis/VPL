@@ -3,10 +3,9 @@ import { z } from "zod";
 import { getPlayerCatalog } from "../../../lib/game/catalog";
 import { getGameweekBySlug, isGameweekLocked } from "../../../lib/game/gameweeks";
 import { validateTeamSelection } from "../../../lib/game/team-rules";
-import { getStoredTeam, saveStoredTeam } from "../../../lib/game/team-store";
+import { getAuthenticatedUserId, getStoredTeam, saveStoredTeam } from "../../../lib/game/team-store";
 
 const teamSchema = z.object({
-  viewerKey: z.string().trim().min(3).max(120),
   teamName: z.string().trim().min(3).max(30),
   playerIds: z.array(z.string().uuid()).min(1),
   gameweekSlug: z.string().trim().min(1).default("gw-3")
@@ -34,7 +33,7 @@ function buildLockedGameweekResponse() {
   );
 }
 
-function buildTeamPayload(data: z.infer<typeof teamSchema>) {
+async function buildTeamPayload(data: z.infer<typeof teamSchema>, ownerId: string) {
   const catalog = getPlayerCatalog();
   const selectedPlayers = data.playerIds
     .map((playerId) => catalog.find((player) => player.id === playerId))
@@ -58,7 +57,7 @@ function buildTeamPayload(data: z.infer<typeof teamSchema>) {
     );
   }
 
-  const savedTeam = saveStoredTeam(data);
+  const savedTeam = await saveStoredTeam({ ...data, ownerId });
 
   return NextResponse.json({
     ok: true,
@@ -67,7 +66,6 @@ function buildTeamPayload(data: z.infer<typeof teamSchema>) {
       players: selectedPlayers,
       playerIds: savedTeam.playerIds,
       gameweekSlug: savedTeam.gameweekSlug,
-      viewerKey: savedTeam.viewerKey,
       revision: savedTeam.revision,
       updatedAt: savedTeam.updatedAt
     },
@@ -84,6 +82,13 @@ function parseBody(request: Request) {
 }
 
 async function saveTeamFromRequest(request: Request) {
+  let ownerId: string | null;
+  try {
+    ownerId = await getAuthenticatedUserId(request);
+  } catch {
+    return NextResponse.json({ ok: false, code: "team_storage_unavailable" }, { status: 503 });
+  }
+  if (!ownerId) return NextResponse.json({ ok: false, code: "unauthorized" }, { status: 401 });
   const body = await parseBody(request);
   if (!body) {
     return NextResponse.json({ ok: false, code: "invalid_payload" }, { status: 400 });
@@ -102,19 +107,29 @@ async function saveTeamFromRequest(request: Request) {
     return buildLockedGameweekResponse();
   }
 
-  return buildTeamPayload(parsed.data);
+  try {
+    return await buildTeamPayload(parsed.data, ownerId);
+  } catch {
+    return NextResponse.json({ ok: false, code: "team_storage_unavailable" }, { status: 503 });
+  }
 }
 
 export async function GET(request: Request) {
-  const url = new URL(request.url);
-  const viewerKey = url.searchParams.get("viewerKey")?.trim();
-  const gameweekSlug = url.searchParams.get("gameweek")?.trim() ?? "gw-3";
-
-  if (!viewerKey) {
-    return NextResponse.json({ ok: false, code: "invalid_viewer" }, { status: 400 });
+  let ownerId: string | null;
+  try {
+    ownerId = await getAuthenticatedUserId(request);
+  } catch {
+    return NextResponse.json({ ok: false, code: "team_storage_unavailable" }, { status: 503 });
   }
-
-  const team = getStoredTeam(viewerKey, gameweekSlug);
+  if (!ownerId) return NextResponse.json({ ok: false, code: "unauthorized" }, { status: 401 });
+  const url = new URL(request.url);
+  const gameweekSlug = url.searchParams.get("gameweek")?.trim() ?? "gw-3";
+  let team: Awaited<ReturnType<typeof getStoredTeam>>;
+  try {
+    team = await getStoredTeam(ownerId, gameweekSlug);
+  } catch {
+    return NextResponse.json({ ok: false, code: "team_storage_unavailable" }, { status: 503 });
+  }
   if (!team) {
     return NextResponse.json({ ok: true, team: null });
   }
@@ -123,11 +138,12 @@ export async function GET(request: Request) {
   const players = team.playerIds
     .map((playerId) => catalog.find((player) => player.id === playerId))
     .filter((player): player is NonNullable<typeof player> => Boolean(player));
+  const { ownerId: _ownerId, ...publicTeam } = team;
 
   return NextResponse.json({
     ok: true,
     team: {
-      ...team,
+      ...publicTeam,
       name: team.teamName,
       players
     }

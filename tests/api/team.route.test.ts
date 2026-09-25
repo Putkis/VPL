@@ -3,13 +3,40 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GET, POST, PUT } from "../../src/app/api/team/route";
 import { getPlayerCatalog } from "../../src/lib/game/catalog";
-import { clearStoredTeamsForTests } from "../../src/lib/game/team-store";
+
+const teamStoreMocks = vi.hoisted(() => {
+  const records = new Map<string, Record<string, unknown>>();
+  return {
+    records,
+    getAuthenticatedUserId: vi.fn(async (): Promise<string | null> => "user-123"),
+    getStoredTeam: vi.fn(async (ownerId: string, gameweekSlug: string) =>
+      records.get(`${ownerId}::${gameweekSlug}`) ?? null
+    ),
+    saveStoredTeam: vi.fn(async (input: { ownerId: string; gameweekSlug: string; teamName: string; playerIds: string[] }) => {
+      const key = `${input.ownerId}::${input.gameweekSlug}`;
+      const previous = records.get(key);
+      const record = {
+        ownerId: input.ownerId,
+        gameweekSlug: input.gameweekSlug,
+        teamName: input.teamName,
+        playerIds: [...input.playerIds],
+        revision: Number(previous?.revision ?? 0) + 1,
+        updatedAt: "2026-03-18T12:00:00.000Z"
+      };
+      records.set(key, record);
+      return record;
+    })
+  };
+});
+
+vi.mock("../../src/lib/game/team-store", () => teamStoreMocks);
 
 function createPostRequest(body: unknown) {
   return new Request("http://localhost/api/team", {
     method: "POST",
     headers: {
-      "Content-Type": "application/json"
+      "Content-Type": "application/json",
+      Authorization: "Bearer valid-test-token"
     },
     body: JSON.stringify(body)
   });
@@ -25,15 +52,19 @@ function createRawPostRequest(body: string) {
   });
 }
 
-function createGetRequest(viewerKey: string, gameweek = "gw-3") {
+function createGetRequest(_viewerKey?: string, gameweek = "gw-3") {
   return new Request(
-    `http://localhost/api/team?viewerKey=${encodeURIComponent(viewerKey)}&gameweek=${encodeURIComponent(gameweek)}`
+    `http://localhost/api/team?gameweek=${encodeURIComponent(gameweek)}`,
+    { headers: { Authorization: "Bearer valid-test-token" } }
   );
 }
 
 describe("POST /api/team", () => {
   beforeEach(() => {
-    clearStoredTeamsForTests();
+    teamStoreMocks.records.clear();
+    teamStoreMocks.getAuthenticatedUserId.mockResolvedValue("user-123");
+    teamStoreMocks.getStoredTeam.mockClear();
+    teamStoreMocks.saveStoredTeam.mockClear();
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-03-18T12:00:00.000Z"));
   });
@@ -158,6 +189,7 @@ describe("POST /api/team", () => {
   it("rejects balanced squads that exceed the budget", async () => {
     const response = await POST(
       createPostRequest({
+        viewerKey: "aino@example.com",
         teamName: "Liian kallis",
         playerIds: expensiveIds,
         gameweekSlug: "gw-3"
@@ -170,6 +202,14 @@ describe("POST /api/team", () => {
     expect(payload.ok).toBe(false);
     expect(payload.code).toBe("budget_exceeded");
     expect(payload.message).toContain("Budjetti ylittyy");
+  });
+
+  it("rejects unauthenticated saves", async () => {
+    teamStoreMocks.getAuthenticatedUserId.mockResolvedValueOnce(null);
+    const response = await POST(createPostRequest({ teamName: "Tasapaino", playerIds: balancedIds }));
+    expect(response.status).toBe(401);
+    expect(await response.json()).toEqual({ ok: false, code: "unauthorized" });
+    expect(teamStoreMocks.saveStoredTeam).not.toHaveBeenCalled();
   });
 
   it("rejects team changes for locked gameweeks", async () => {
@@ -192,7 +232,7 @@ describe("POST /api/team", () => {
     });
   });
 
-  it("persists a saved team and loads it back for the same viewer", async () => {
+  it("persists a saved team and loads it back for the authenticated user", async () => {
     await POST(
       createPostRequest({
         viewerKey: "aino@example.com",
@@ -207,7 +247,6 @@ describe("POST /api/team", () => {
 
     expect(response.status).toBe(200);
     expect(payload.team).toMatchObject({
-      viewerKey: "aino@example.com",
       name: "Tasapaino",
       teamName: "Tasapaino",
       gameweekSlug: "gw-3",
@@ -216,12 +255,13 @@ describe("POST /api/team", () => {
     });
   });
 
-  it("rejects saved-team reads without a viewer key", async () => {
+  it("rejects saved-team reads without authentication", async () => {
+    teamStoreMocks.getAuthenticatedUserId.mockResolvedValueOnce(null);
     const response = await GET(new Request("http://localhost/api/team?gameweek=gw-3"));
     const payload = await response.json();
 
-    expect(response.status).toBe(400);
-    expect(payload).toEqual({ ok: false, code: "invalid_viewer" });
+    expect(response.status).toBe(401);
+    expect(payload).toEqual({ ok: false, code: "unauthorized" });
   });
 
   it("updates an existing team and bumps the revision", async () => {

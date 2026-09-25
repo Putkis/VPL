@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
-import { clearViewerEmail, setViewerEmail } from "../../lib/game/viewer-identity";
 import { getSupabaseClient } from "../../lib/supabase/client";
 
 type AuthMode = "sign-in" | "sign-up";
@@ -55,11 +54,6 @@ export function AuthPanel() {
       }
 
       setSession(data.session);
-      if (data.session?.user.email) {
-        setViewerEmail(data.session.user.email);
-      } else {
-        clearViewerEmail();
-      }
     };
 
     loadSession().catch(() => {
@@ -75,11 +69,6 @@ export function AuthPanel() {
       data: { subscription }
     } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       setSession(nextSession);
-      if (nextSession?.user.email) {
-        setViewerEmail(nextSession.user.email);
-      } else {
-        clearViewerEmail();
-      }
     });
 
     return () => {
@@ -118,9 +107,6 @@ export function AuthPanel() {
     }
 
     setSession(data.session ?? null);
-    if (data.session?.user.email) {
-      setViewerEmail(data.session.user.email);
-    }
     setStatus("success");
     setMessage(
       mode === "sign-up"
@@ -146,7 +132,6 @@ export function AuthPanel() {
     }
 
     setSession(null);
-    clearViewerEmail();
     setStatus("success");
     setMessage("Kirjauduit ulos onnistuneesti.");
   }
