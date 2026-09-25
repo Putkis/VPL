@@ -1,7 +1,7 @@
 import React from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TeamBuilder } from "../../src/app/team-builder/team-builder";
 import { getPlayerCatalog } from "../../src/lib/game/catalog";
 
@@ -9,6 +9,8 @@ const fetchMock = vi.fn();
 
 describe("TeamBuilder", () => {
   beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-04-18T12:54:59.000Z"));
     fetchMock.mockReset();
     fetchMock.mockImplementation(async (input: string, init?: { method?: string }) => {
       if (!init?.method || init.method === "GET") {
@@ -33,6 +35,10 @@ describe("TeamBuilder", () => {
       };
     });
     vi.stubGlobal("fetch", fetchMock);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("shows role or team-size validation feedback before save", async () => {

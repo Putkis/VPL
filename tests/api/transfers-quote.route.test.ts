@@ -1,9 +1,18 @@
 // @vitest-environment node
 
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { POST } from "../../src/app/api/transfers/quote/route";
 
 describe("POST /api/transfers/quote", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-04-18T12:54:59.000Z"));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("returns a valid quote for an open gameweek", async () => {
     const response = await POST(
       new Request("http://localhost/api/transfers/quote", {

@@ -1,6 +1,6 @@
 // @vitest-environment node
 
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GET, POST, PUT } from "../../src/app/api/team/route";
 import { getPlayerCatalog } from "../../src/lib/game/catalog";
 import { clearStoredTeamsForTests } from "../../src/lib/game/team-store";
@@ -23,7 +23,13 @@ function createGetRequest(viewerKey: string, gameweek = "gw-3") {
 
 describe("POST /api/team", () => {
   beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-04-18T12:54:59.000Z"));
     clearStoredTeamsForTests();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   const balancedIds = getPlayerCatalog()
