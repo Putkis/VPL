@@ -25,6 +25,11 @@ describe("RootLayout", () => {
 
     expect(html).toContain("<html lang=\"en\">");
     expect(html).toContain("<body>");
+    expect(html).toContain("aria-label=\"Demo pages\"");
+    expect(html).toContain(">VPL Demo<");
+    expect(html).toContain("href=\"/auth\"");
+    expect(html).toContain(">Team Builder<");
+    expect(html).toContain("href=\"/week-view\"");
     expect(html).toContain("<main>content</main>");
     expect(html).toContain("</body>");
     expect(html).toContain("</html>");
