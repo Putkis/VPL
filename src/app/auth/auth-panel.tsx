@@ -40,17 +40,29 @@ export function AuthPanel() {
   useEffect(() => {
     let isMounted = true;
     const supabase = resolveSupabaseClient();
-
     if (!supabase) {
       return () => {
         isMounted = false;
       };
     }
 
-    void supabase.auth.getSession().then(({ data }) => {
-      if (isMounted) {
-        setSession(data.session);
+    const loadSession = async () => {
+      const { data } = await supabase.auth.getSession();
+
+      if (!isMounted) {
+        return;
       }
+
+      setSession(data.session);
+    };
+
+    loadSession().catch(() => {
+      if (!isMounted) {
+        return;
+      }
+
+      setStatus("error");
+      setMessage("Istunnon lataus epaonnistui.");
     });
 
     const {
