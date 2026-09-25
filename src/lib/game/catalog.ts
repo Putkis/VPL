@@ -78,7 +78,9 @@ export function filterAndSortPlayers(
 
 export function getPlayerCatalogMeta(players: CatalogPlayer[]) {
   return {
-    clubs: [...new Set(players.map((player) => player.club))].sort(),
+    clubs: [...new Set(players.map((player) => player.club))].sort((left, right) =>
+      left.localeCompare(right)
+    ),
     positions: [...new Set(players.map((player) => player.position))]
   };
 }

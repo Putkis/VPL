@@ -1,8 +1,12 @@
 import React from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { TransfersPanel } from "../../src/app/transfers/transfers-panel";
+
+vi.mock("../../src/lib/game/gameweeks", () => ({
+  isGameweekLocked: () => false
+}));
 
 describe("TransfersPanel", () => {
   it("shows minus points after the free transfer is exceeded", async () => {
