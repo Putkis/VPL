@@ -23,13 +23,13 @@ describe("supabase client", () => {
     process.env = originalEnv;
   });
 
-  it("creates client using public env vars", async () => {
-    const { supabase } = await import("../../src/lib/supabase/client");
+  it("creates client using public env vars lazily", async () => {
+    const { getSupabaseClient } = await import("../../src/lib/supabase/client");
 
+    expect(getSupabaseClient()).toEqual({ mocked: true });
     expect(createClientMock).toHaveBeenCalledWith(
       "https://example.supabase.co",
       "anon-key"
     );
-    expect(supabase).toEqual({ mocked: true });
   });
 });
